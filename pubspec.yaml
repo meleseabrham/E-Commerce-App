@@ -1,0 +1,88 @@
+name: mehal_gebeya
+description: A responsive Ethiopian e-commerce app.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  shared_preferences: ^2.2.2
+  provider: ^6.1.1
+  http: ^1.1.0
+  cached_network_image: ^3.2.3
+  flutter_svg: ^2.0.7
+  intl: ^0.19.0
+  # Firebase dependencies
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  google_sign_in: ^6.2.1
+  cloud_firestore: ^4.13.6
+  # Social media sharing
+  url_launcher: ^6.2.5
+  share_plus: ^7.2.2
+  font_awesome_flutter: ^10.7.0
+  # PDF and email
+  pdf: ^3.11.3
+  path_provider: ^2.1.1
+  mailer: ^6.0.1
+  flutter_dotenv: ^5.1.0
+  uuid: ^4.2.2
+  open_file: ^3.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/icon.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/food/
+    - assets/cloth/
+    - assets/jewelry/
+    - assets/payment/
+    - assets/handcraft/
+    - assets/electronic/
+    - assets/profile.jpg
+    - assets/coffee.jpg
+    - assets/scarf.jpg
+    - assets/teff.jpg
+    - assets/jewelry.jpg
+    - assets/logo/cbe.jpg
+    - assets/logo/tele.jpg
+    - assets/logo/google.png
+    - assets/logo/chapa.jpg
+    - assets/food/coffee.jpg
+    - assets/food/teff.jpg
+    - assets/food/honey.jpg
+    - assets/food/spices.jpg
+    - assets/cloth/shirt.jpg
+    - assets/cloth/scarf.jpg
+    - assets/cloth/dress.jpg
+    - assets/cloth/hat.jpg
+    - assets/handcraft/basket.jpg
+    - assets/handcraft/pottery.jpg
+    - assets/handcraft/woodcarving.jpg
+    - assets/handcraft/leatherbag.jpg
+    - assets/jewelry/jewelry.jpg
+    - assets/jewelry/necklace.jpg
+    - assets/jewelry/bracelet.jpg
+    - assets/jewelry/earrings.jpg
+    - assets/electronic/phone.jpg
+    - assets/electronic/laptop.jpg
+    - assets/electronic/headphones.jpg
+    - assets/electronic/watch.jpg

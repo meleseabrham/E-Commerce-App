@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn() && (isOwner(userId) || request.auth.token.admin == true);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if false; // Prevent user document deletion
+    }
+    
+    // Orders collection
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        request.auth.token.admin == true
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        request.auth.token.admin == true
+      );
+      allow delete: if false; // Prevent order deletion, use status updates instead
+    }
+    
+    // Products collection
+    match /products/{productId} {
+      allow read: if true; // Anyone can read products
+      allow write: if isSignedIn() && request.auth.token.admin == true; // Only admins can modify products
+    }
+    
+    // Categories collection
+    match /categories/{categoryId} {
+      allow read: if true; // Anyone can read categories
+      allow write: if isSignedIn() && request.auth.token.admin == true; // Only admins can modify categories
+    }
+    
+    // Cart collection
+    match /carts/{cartId} {
+      allow read, write: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+    
+    // Reviews collection
+    match /reviews/{reviewId} {
+      allow read: if true; // Anyone can read reviews
+      allow create: if isSignedIn(); // Logged in users can create reviews
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid; // Users can only modify their own reviews
+    }
+  }
+} 
