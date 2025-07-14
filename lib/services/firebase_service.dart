@@ -6,7 +6,6 @@ import '../models/product.dart';
 
 class FirebaseService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
-  static final GoogleSignIn _googleSignIn = GoogleSignIn();
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static Future<void> initializeFirebase() async {
@@ -88,30 +87,38 @@ class FirebaseService {
   // Google Sign In
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-
+      print('Starting Google sign-in...');
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        print('Google sign-in cancelled by user.');
+        return null;
+      }
+      print('Google user: ${googleUser.displayName} (${googleUser.email})');
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-
       final userCredential = await _auth.signInWithCredential(credential);
-      
       if (userCredential.user != null) {
         await createOrUpdateUserDocument(userCredential.user!);
       }
-      
+      print('Google sign-in successful.');
       return userCredential;
     } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
       throw _handleAuthError(e);
+    } catch (e) {
+      print('Unknown error during Google sign-in: ${e}');
+      rethrow;
     }
   }
 
   // Sign Out
   static Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
     await _auth.signOut();
   }
 

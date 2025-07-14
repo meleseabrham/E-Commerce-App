@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+// import 'package:open_file/open_file.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import '../../models/order.dart';
@@ -265,7 +265,7 @@ class OrderDetailScreen extends StatelessWidget {
   Future<void> _downloadReceipt(BuildContext context) async {
     try {
       final receiptPath = await ReceiptService.generateReceipt(order);
-      await OpenFile.open(receiptPath);
+      // await OpenFile.open(receiptPath); // TODO: Implement file opening in a cross-platform way
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,3 +1,7 @@
+
+
+
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +11,8 @@ import '../home/home_screen.dart';
 import '../../widgets/social_footer.dart';
 import '../../main.dart'; // Import for AppColors
 import '../../widgets/order_receipt_checker.dart';
+import 'package:mehal_gebeya/theme/app_colors.dart'; // Added import for AppColors
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -210,12 +216,41 @@ class _LoginScreenState extends State<LoginScreen> {
                     text: TextSpan(
                       style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                       children: [
-                        TextSpan(text: 'M', style: TextStyle(color: AppColors.primary)),
-                        TextSpan(text: 'e', style: TextStyle(color: AppColors.textPrimary)),
-                        TextSpan(text: 'H', style: TextStyle(color: AppColors.primary)),
                         TextSpan(
-                          text: 'al Gebeya',
-                          style: TextStyle(color: AppColors.textPrimary),
+                          text: 'M',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                        TextSpan(
+                          text: 'e',
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.textPrimary
+                              : AppColors.textPrimary,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'H',
+                          style: TextStyle(color: AppColors.warningColor),
+                        ),
+                        TextSpan(
+                          text: 'al ',
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.textPrimary
+                              : AppColors.textPrimary,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'G',
+                          style: TextStyle(color: AppColors.error),
+                        ),
+                        TextSpan(
+                          text: 'ebeya',
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.textPrimary
+                              : AppColors.textPrimary,
+                          ),
                         ),
                       ],
                     ),
