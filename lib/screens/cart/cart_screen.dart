@@ -24,32 +24,24 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _loadCart() async {
+    // Allow guests to view cart, but only load user cart if logged in
     final user = FirebaseService.currentUser;
-    if (user == null) {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
+    if (user != null) {
+      try {
+        await Provider.of<CartProvider>(context, listen: false).loadUserCart();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error loading cart: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
-      return;
     }
-
-    try {
-      await Provider.of<CartProvider>(context, listen: false).loadUserCart();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading cart: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -100,15 +92,15 @@ class _CartScreenState extends State<CartScreen> {
           Icon(
             Icons.shopping_cart_outlined,
             size: 100,
-            color: AppColors.textSecondary.withOpacity(0.5),
+            color: AppColors.secondary.withOpacity(0.3),
           ),
           const SizedBox(height: 16),
           Text(
             'Your cart is empty',
             style: TextStyle(
               fontSize: 20,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
@@ -116,6 +108,7 @@ class _CartScreenState extends State<CartScreen> {
             'Add items to get started',
             style: TextStyle(
               color: AppColors.textSecondary,
+              fontSize: 15,
             ),
           ),
         ],
@@ -127,14 +120,15 @@ class _CartScreenState extends State<CartScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppColors.shadow,
             offset: const Offset(0, -3),
             blurRadius: 10,
           ),
         ],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
       ),
       child: SafeArea(
         child: Column(
@@ -148,15 +142,16 @@ class _CartScreenState extends State<CartScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
                   '\$${cart.totalAmount.toStringAsFixed(2)}',
                   style: TextStyle(
-                    fontSize: 20,
-                    color: AppColors.primary,
+                    fontSize: 22,
+                    color: AppColors.secondary,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
@@ -169,15 +164,20 @@ class _CartScreenState extends State<CartScreen> {
                     ? null
                     : () => _proceedToCheckout(context, cart),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
                   backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  elevation: 0,
                 ),
                 child: const Text(
                   'Proceed to Checkout',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ),
@@ -189,16 +189,29 @@ class _CartScreenState extends State<CartScreen> {
 
   void _proceedToCheckout(BuildContext context, CartProvider cart) {
     if (cart.items.isEmpty) return;
-
     final user = FirebaseService.currentUser;
     if (user == null) {
-      Navigator.pushReplacement(
+      // Redirect to login, then continue to payment after login
+      Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(
+          builder: (context) => LoginScreen(
+            onLoginSuccess: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaymentScreen(
+                    items: cart.items.values.toList(),
+                    totalAmount: cart.totalAmount,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       );
       return;
     }
-    
     Navigator.push(
       context,
       MaterialPageRoute(

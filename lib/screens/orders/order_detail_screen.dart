@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../models/order.dart';
 import '../../theme/app_colors.dart';
 import '../../services/receipt_service.dart';
+import 'package:open_filex/open_filex.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   final PurchaseOrder order;
@@ -55,7 +56,20 @@ class OrderDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('Order ID', order.id),
+            Row(
+              children: [
+                Text('Order ID', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    order.id,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             _buildInfoRow(
               'Order Date',
@@ -63,6 +77,7 @@ class OrderDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _buildInfoRow('Status', order.status.toUpperCase()),
+            
           ],
         ),
       ),
@@ -265,12 +280,18 @@ class OrderDetailScreen extends StatelessWidget {
   Future<void> _downloadReceipt(BuildContext context) async {
     try {
       final receiptPath = await ReceiptService.generateReceipt(order);
-      // await OpenFile.open(receiptPath); // TODO: Implement file opening in a cross-platform way
-
-      if (context.mounted) {
+      final result = await OpenFilex.open(receiptPath);
+      if (result.type != ResultType.done && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Receipt saved, but could not open: ${result.message}'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Receipt downloaded successfully'),
+            content: Text('Receipt downloaded and opened successfully'),
             backgroundColor: Colors.green,
           ),
         );

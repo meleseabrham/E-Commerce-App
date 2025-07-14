@@ -6,6 +6,8 @@ import '../../models/cart_item.dart';
 import 'package:provider/provider.dart';
 import '../payment/payment_screen.dart';
 import '../cart/cart_screen.dart';
+import '../../services/firebase_service.dart'; // Added import for FirebaseService
+import '../auth/login_screen.dart'; // Added import for LoginScreen
 
 class ProductDetailScreen extends StatelessWidget {
   final Product product;
@@ -111,6 +113,7 @@ class ProductDetailScreen extends StatelessWidget {
   }
 
   void _addToCart(BuildContext context) {
+    // Allow guests to add to cart (cart is local for guests)
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     cartProvider.addItem(product);
     
@@ -137,6 +140,8 @@ class ProductDetailScreen extends StatelessWidget {
   }
 
   void _buyNow(BuildContext context) {
+    // Require login for Buy Now
+    final user = FirebaseService.currentUser;
     final cartItem = CartItem(
       id: product.id,
       productId: product.id,
@@ -145,7 +150,28 @@ class ProductDetailScreen extends StatelessWidget {
       quantity: 1,
       image: product.image,
     );
-
+    if (user == null) {
+      // Redirect to login, then continue to payment after login
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LoginScreen(
+            onLoginSuccess: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaymentScreen(
+                    items: [cartItem],
+                    totalAmount: product.price,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(

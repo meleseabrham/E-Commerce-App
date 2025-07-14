@@ -103,6 +103,31 @@ class MyOrdersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseService.currentUser;
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('My Orders'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, size: 60, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text('You must be logged in to view your orders.',
+                  style: TextStyle(fontSize: 18, color: Colors.grey)),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pushNamed(context, '/login'),
+                child: const Text('Login'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Orders'),

@@ -76,6 +76,9 @@ class OrderDetailsScreen extends StatelessWidget {
     switch (order.status.toLowerCase()) {
       case 'pending':
         statusColor = Colors.orange;
+         break;
+      case 'processing':
+        statusColor = AppColors.secondary;
         break;
       case 'completed':
         statusColor = AppColors.accent;

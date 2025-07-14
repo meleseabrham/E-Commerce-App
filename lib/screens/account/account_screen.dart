@@ -62,6 +62,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseService.currentUser;
     if (_isLoading) {
       return const Scaffold(
         body: Center(
@@ -70,6 +71,41 @@ class _AccountScreenState extends State<AccountScreen> {
       );
     }
 
+    if (user == null) {
+      // Guest view: Only show Settings, label as 'Settings'
+      return Scaffold(
+        appBar: AppBar(title: const Text('Settings')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const CircleAvatar(
+                radius: 50,
+                backgroundImage: AssetImage('assets/profile.jpg'),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Guest',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 30),
+              Card(
+                elevation: 2,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: const Icon(Icons.settings, color: Colors.green),
+                  title: const Text('Settings'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () => _showSettings(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    // Logged-in user view: show all account options
     return Scaffold(
       appBar: AppBar(title: const Text('My Account')),
       body: SingleChildScrollView(
@@ -188,49 +224,7 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   void _showSettings(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Settings')),
-          body: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Theme',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, child) {
-                    return SwitchListTile(
-                      title: Row(
-                        children: [
-                          Icon(
-                            themeProvider.isDarkMode
-                                ? Icons.dark_mode
-                                : Icons.light_mode,
-                          ),
-                          const SizedBox(width: 16),
-                          Text(themeProvider.isDarkMode ? 'Dark Mode' : 'Light Mode'),
-                        ],
-                      ),
-                      value: themeProvider.isDarkMode,
-                      onChanged: (bool value) {
-                        themeProvider.toggleTheme();
-                      },
-                    );
-                  },
-                ),
-               
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    Navigator.pushNamed(context, '/settings');
   }
 
   void _logout(BuildContext context) {
@@ -250,7 +244,7 @@ class _AccountScreenState extends State<AccountScreen> {
               if (mounted) {
                 Navigator.pushNamedAndRemoveUntil(
                   context,
-                  '/login',
+                  '/home',
                   (route) => false,
                 );
               }

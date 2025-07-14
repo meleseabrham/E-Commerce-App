@@ -6,6 +6,7 @@ import 'screens/auth/registration_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/account/account_screen.dart';
+import 'screens/settings/settings_screen.dart';
 import 'screens/categories/categories.dart';
 import 'services/firebase_service.dart';
 import 'providers/cart_provider.dart';
@@ -190,13 +191,14 @@ class MyApp extends StatelessWidget {
           ),
           themeMode: themeProvider.themeMode,
           debugShowCheckedModeBanner: false,
-          initialRoute: '/login',
+          initialRoute: '/home',
           routes: {
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegistrationScreen(),
             '/forgot-password': (context) => const ForgotPasswordScreen(),
             '/home': (context) => const HomeScreen(),
             '/account': (context) => const AccountScreen(),
+            '/settings': (context) => const SettingsScreen(),
             '/clothing': (context) => ClothingCategoryPage(),
             '/food': (context) => FoodBeverageCategoryPage(),
             '/handicrafts': (context) => HandicraftCategoryPage(),

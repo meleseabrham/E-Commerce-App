@@ -5,6 +5,9 @@ import '../../widgets/product_card.dart';
 import '../../providers/cart_provider.dart';
 import '../cart/cart_screen.dart';
 import '../../theme/app_colors.dart';
+import '../../services/firebase_service.dart';
+import '../auth/login_screen.dart';
+import '../auth/registration_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -77,18 +80,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseService.currentUser;
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: RichText(
-          text: const TextSpan(
+          text: TextSpan(
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             children: [
-              TextSpan(text: 'M', style: TextStyle(color: Colors.white)),
-              TextSpan(text: 'e', style: TextStyle(color: Colors.white70)),
-              TextSpan(text: 'H', style: TextStyle(color: Colors.white)),
-              TextSpan(text: 'al Gebeya', style: TextStyle(color: Colors.white70)),
-            ],
+                  TextSpan(text: 'M', style: TextStyle(color: AppColors.secondary)),
+                  TextSpan(text: 'e', style: TextStyle(color: AppColors.textPrimary)),
+                  TextSpan(text: 'H', style: TextStyle(color: AppColors.warningColor)),
+                 TextSpan(text: 'al ', style: TextStyle(color: AppColors.textPrimary)),
+                TextSpan(text: 'G', style: TextStyle(color: AppColors.error)),
+                TextSpan(text: 'ebeya', style: TextStyle(color: AppColors.textPrimary)),
+             ],
           ),
         ),
         actions: [
@@ -128,9 +134,57 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
+          if (user == null) ...[
+            TextButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    child: SizedBox(
+                      width: 400,
+                      child: LoginScreen(),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Login', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            TextButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    child: SizedBox(
+                      width: 400,
+                      child: RegistrationScreen(),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Register', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.person,),
+              onPressed: () => Navigator.pushNamed(context, '/account'),
+              tooltip: 'Account',
+            ),
+            // IconButton(
+            //   icon: const Icon(Icons.logout),
+            //   onPressed: () async {
+            //     await FirebaseService.signOut();
+            //     if (mounted) setState(() {});
+            //   },
+            //   tooltip: 'Logout',
+            // ),
+          ],
         ],
       ),
-      drawer: _buildDrawer(context),
+      drawer: _buildDrawer(context, user),
       body: RefreshIndicator(
         onRefresh: () async {
           // TODO: Implement refresh logic
@@ -161,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.category), label: 'Categories'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
         onTap: (index) {
           if (index == 1) {
@@ -170,23 +224,29 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context) => _buildCategoriesSheet(context),
             );
           } else if (index == 2) {
-            Navigator.pushNamed(context, '/account');
+            Navigator.pushNamed(context, '/settings');
           }
         },
       ),
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawer(BuildContext context, user) {
     return Drawer(
       width: 260,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           Container(
             height: 150,
-            decoration: const BoxDecoration(color: Colors.green),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
+            ),
             child: Stack(
               children: [
                 const Center(
@@ -196,6 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white,
                       fontSize: 25,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
@@ -204,18 +265,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   top: 56,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surface,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black12,
+                          color: AppColors.shadow,
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red, size: 30),
+                      icon: Icon(Icons.close, color: AppColors.error, size: 30),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
@@ -223,42 +284,71 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          _buildDrawerItem(
+          _buildDrawerCategory(
             context,
             icon: Icons.restaurant,
             title: 'Food & Beverages',
             route: '/food',
+            color: AppColors.successColor,
           ),
-          _buildDrawerItem(
+          _buildDrawerCategory(
             context,
             icon: Icons.shopping_bag,
             title: 'Clothing',
             route: '/clothing',
+            color: AppColors.secondary,
           ),
-          _buildDrawerItem(
+          _buildDrawerCategory(
             context,
             icon: Icons.handyman,
             title: 'Handicrafts',
             route: '/handicrafts',
+            color: AppColors.warningColor,
           ),
-          _buildDrawerItem(
+          _buildDrawerCategory(
             context,
             icon: Icons.diamond,
             title: 'Jewelry',
             route: '/jewelry',
+            color: AppColors.infoColor,
           ),
-          _buildDrawerItem(
+          _buildDrawerCategory(
             context,
             icon: Icons.devices,
             title: 'Electronics',
             route: '/electronics',
+            color: AppColors.primary,
           ),
-          _buildDrawerItem(
-            context,
-            icon: Icons.person,
-            title: 'Account',
-            route: '/account',
-          ),
+          if (user == null) ...[
+            _buildDrawerItem(
+              context,
+              icon: Icons.login,
+              title: 'Login',
+              route: '/login',
+            ),
+            _buildDrawerItem(
+              context,
+              icon: Icons.app_registration,
+              title: 'Register',
+              route: '/register',
+            ),
+          ] else ...[
+            _buildDrawerItem(
+              context,
+              icon: Icons.person,
+              title: 'Account',
+              route: '/account',
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                await FirebaseService.signOut();
+                if (mounted) setState(() {});
+                Navigator.pop(context);
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -391,8 +481,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final categories = [
       {'icon': Icons.restaurant, 'name': 'Food', 'route': '/food'},
       {'icon': Icons.shopping_bag, 'name': 'Clothing', 'route': '/clothing'},
-      {'icon': Icons.handyman, 'name': 'Crafts', 'route': '/handicrafts'},
+      {'icon': Icons.devices, 'name': 'Electronics', 'route': '/electronics'},
       {'icon': Icons.diamond, 'name': 'Jewelry', 'route': '/jewelry'},
+      {'icon': Icons.handyman, 'name': 'Crafts', 'route': '/handicrafts'},
+      
     ];
 
     return Container(
@@ -582,6 +674,33 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // Add this new helper for colored category items
+  Widget _buildDrawerCategory(
+    BuildContext context, {
+      required IconData icon,
+      required String title,
+      required String route,
+      required Color color,
+    }) {
+    return ListTile(
+      leading: Icon(icon, color: color, size: 28),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      hoverColor: color.withOpacity(0.08),
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.pushNamed(context, route);
+      },
     );
   }
 } 
