@@ -25,15 +25,19 @@ import 'screens/orders/my_orders_screen.dart';
 import 'providers/wishlist_provider.dart';
 import 'screens/account/personal_info_screen.dart';
 import 'screens/account/change_password_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load();
+  final supabaseUrl = dotenv.env['SUPABASE_URL']!;
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']!;
   final prefs = await SharedPreferences.getInstance();
   
   // Initialize Supabase
   await Supabase.initialize(
-    url: 'https://lpndjssicpcnssmngqln.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwbmRqc3NpY3BjbnNzbW5ncWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1ODM0NTIsImV4cCI6MjA2ODE1OTQ1Mn0.fIKuhSlkKhlcQ7-Dn1p3Dn3cZXNuWID3KHbVYANTN_s',
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
   );
   
   runApp(
