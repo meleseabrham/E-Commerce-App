@@ -3,9 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/social_footer.dart';
-import '../../services/firebase_service.dart';
 import '../../main.dart'; // Import for AppColors
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
 import '../home/home_screen.dart';
 import 'package:mehal_gebeya/theme/app_colors.dart'; // Added import for AppColors
@@ -192,13 +191,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         const Text("Already have an account? "),
                         GestureDetector(
                           onTap: () {
+                             Navigator.of(context).pop(); 
                             showDialog(
                               context: context,
                               builder: (context) => Dialog(
                                 insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                                 child: SizedBox(
-                                  width: 400,
+                         
+                                  height: 500,
                                   child: LoginScreen(),
                                 ),
                               ),
@@ -220,64 +221,91 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
-      try {
-      final userCredential = await FirebaseService.signUpWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text,
+    try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      final response = await Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
       );
-
-      if (userCredential != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Registration successful! Please sign in.'),
-            backgroundColor: AppColors.secondary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-
-        // Clear the form
-        _emailController.clear();
-        _passwordController.clear();
-        _confirmPasswordController.clear();
-
-        // Navigate back to login screen
+      if (response.user != null) {
+        // Insert user metadata into 'users' table
+        await Supabase.instance.client.from('users').insert({
+          'id': response.user!.id,
+          'email': response.user!.email,
+          'created_at': DateTime.now().toIso8601String(),
+          'is_admin': false,
+        });
+        // After registration, go to login page
         if (mounted) {
-          Navigator.pop(context);
+          Navigator.of(context).pop(); // Close registration dialog if open
+          showDialog(
+            context: context,
+            builder: (context) => Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              child: SizedBox(
+                height: 500,
+                child: LoginScreen(),
+              ),
+            ),
+          );
         }
+        return;
+      } else if (response.user == null && response.session == null) {
+        // Email confirmation required
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Registration successful! Please check your email to confirm your account.'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
         }
-      } catch (e) {
-      String errorMessage = 'Registration failed. Please try again.';
-      
-      if (e.toString().contains('email-already-in-use')) {
-        errorMessage = 'An account already exists with this email.';
-      } else if (e.toString().contains('invalid-email')) {
-        errorMessage = 'Please enter a valid email address.';
-      } else if (e.toString().contains('weak-password')) {
-        errorMessage = 'Password is too weak. Please use a stronger password.';
-      }
-
-      if (mounted) {
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text('Registration failed.'),
             backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
           ),
         );
       }
-      } finally {
-        if (mounted) {
-        setState(() => _isLoading = false);
-        }
+    } catch (e) {
+      final errorStr = e.toString();
+      if (errorStr.contains('SocketException') ||
+          errorStr.contains('Failed host lookup') ||
+          errorStr.contains('No address associated')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No internet connection.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (errorStr.contains('email already in use')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('This email is already registered. Please use a different email.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (errorStr.contains('invalid_email')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please enter a valid email address.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration failed. Please try again later.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 } 

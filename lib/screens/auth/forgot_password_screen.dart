@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/social_footer.dart';
-import '../../services/firebase_service.dart';
 import '../../theme/app_colors.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -29,7 +30,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       try {
-        await FirebaseService.resetPassword(_emailController.text.trim());
+        await Supabase.instance.client.auth.resetPasswordForEmail(_emailController.text.trim());
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -48,25 +49,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           });
         }
       } catch (e) {
-        if (mounted) {
-          String errorMessage = 'Failed to send reset link. Please try again.';
-
-          if (e.toString().contains('user-not-found')) {
-            errorMessage = 'No account found with this email address.';
-          } else if (e.toString().contains('invalid-email')) {
-            errorMessage = 'Please enter a valid email address.';
-          } else if (e.toString().contains('network-request-failed')) {
-            errorMessage = 'Network error. Please check your internet connection.';
-          }
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+        String errorMsg = 'Failed to send reset link. Please try again.';
+        if (e.toString().contains('user-not-found')) {
+          errorMsg = 'No account found with this email address.';
+        } else if (e.toString().contains('invalid-email')) {
+          errorMsg = 'Please enter a valid email address.';
+        } else if (e.toString().contains('network-request-failed')) {
+          errorMsg = 'Network error. Please check your internet connection.';
         }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       } finally {
         if (mounted) {
           setState(() {
@@ -80,79 +77,112 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Forgot Password'),
-       
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 40),
-              const Text(
-                'Reset Password',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Card(
+              elevation: 6,
+              shadowColor: AppColors.shadow,
+              color: AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
               ),
-              const SizedBox(height: 54),
-              const Text(
-                'Enter your email address and we\'ll send you a link to reset your password.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 34),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 34),
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                   backgroundColor: AppColors.secondary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _isLoading ? null : _resetPassword,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Send Reset Link',
-                          style: TextStyle(fontSize: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 16),
+                    Center(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                          children: [
+                            TextSpan(text: 'M', style: TextStyle(color: AppColors.primary)),
+                            TextSpan(text: 'e', style: TextStyle(color: AppColors.textPrimary)),
+                            TextSpan(text: 'H', style: TextStyle(color: AppColors.warningColor)),
+                            TextSpan(text: 'al ', style: TextStyle(color: AppColors.textPrimary)),
+                            TextSpan(text: 'G', style: TextStyle(color: AppColors.error)),
+                            TextSpan(text: 'ebeya', style: TextStyle(color: AppColors.textPrimary)),
+                          ],
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 40),
+                          const Text(
+                            'Reset Password',
+                            style: TextStyle(
+                              fontSize: 34,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 54),
+                          const Text(
+                            'Enter your email address and we\'ll send you a link to reset your password.',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 34),
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.email),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                return 'Please enter a valid email';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 34),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                 backgroundColor: AppColors.secondary,
+                                side: BorderSide(color: Colors.grey),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              onPressed: _isLoading ? null : _resetPassword,
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.black,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Send Reset Link',
+                                      style: TextStyle(fontSize: 16, color: Colors.black),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

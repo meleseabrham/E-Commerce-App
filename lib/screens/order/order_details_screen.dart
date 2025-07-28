@@ -1,11 +1,68 @@
 import 'package:flutter/material.dart';
 import '../../models/order.dart';
 import '../../theme/app_colors.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:open_filex/open_filex.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
   final PurchaseOrder order;
 
   const OrderDetailsScreen({Key? key, required this.order}) : super(key: key);
+
+  // 1. Fetch addresses
+  Future<List<Map<String, dynamic>>> _fetchAddresses() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return [];
+    final data = await Supabase.instance.client
+        .from('user_addresses')
+        .select()
+        .eq('user_id', user.id);
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  // 2. Store selected address and payment method in state
+  String? _selectedAddressId;
+  String? _selectedPaymentMethod;
+
+  // 3. Enable Pay Now only if both are selected
+  bool get _canPay => _selectedAddressId != null && _selectedPaymentMethod != null;
+
+  // 4. On Pay Now
+  Future<void> _payNow() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null || !_canPay) return;
+
+    // Create order
+    final orderRes = await Supabase.instance.client.from('orders').insert({
+      'user_id': user.id,
+      'status': 'pending',
+      'total': order.totalAmount,
+      'address_id': _selectedAddressId,
+    }).select().single();
+
+    final orderId = orderRes['id'];
+
+    // Create payment
+    await Supabase.instance.client.from('payments').insert({
+      'order_id': orderId,
+      'user_id': user.id,
+      'method': _selectedPaymentMethod,
+      'amount': order.totalAmount,
+      'status': 'pending',
+    });
+
+    // Navigate to order details
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OrderDetailsScreen(order: order),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

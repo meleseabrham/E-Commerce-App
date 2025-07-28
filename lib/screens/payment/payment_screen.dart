@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../../theme/app_colors.dart';
 import '../../models/cart_item.dart';
 import '../../models/order.dart';
-import '../../services/firebase_service.dart';
 import '../../services/receipt_service.dart';
 import '../orders/order_detail_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../account/address_book_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
   final List<CartItem> items;
@@ -31,6 +31,42 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _accountController = TextEditingController();
   bool _isProcessing = false;
+  Map<String, dynamic>? _selectedAddress;
+  List<Map<String, dynamic>> _addresses = [];
+  bool _isLoadingAddresses = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAddresses();
+  }
+
+  Future<void> _fetchAddresses() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    final data = await Supabase.instance.client
+        .from('user_addresses')
+        .select()
+        .eq('user_id', user.id)
+        .order('is_default', ascending: false);
+    setState(() {
+      _addresses = List<Map<String, dynamic>>.from(data);
+      _selectedAddress = _addresses.firstWhere((a) => a['is_default'] == true, orElse: () => _addresses.isNotEmpty ? _addresses[0] : {});
+      _isLoadingAddresses = false;
+    });
+  }
+
+  void _showAddressSelector() async {
+    final selected = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => AddressSelectorSheet(addresses: _addresses, selected: _selectedAddress),
+    );
+    if (selected != null) {
+      setState(() {
+        _selectedAddress = selected;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -41,43 +77,59 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Payment')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Select Payment Method',
-                style: TextStyle(
-                  fontSize: 20,
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
+      appBar: AppBar(title: Text('Payment')),
+      body: _isLoadingAddresses
+          ? Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // Address selection section
+                ListTile(
+                  leading: Icon(Icons.location_on),
+                  title: Text(_selectedAddress != null && _selectedAddress!.isNotEmpty
+                      ? '${_selectedAddress!['label'] ?? ''}: ${_selectedAddress!['address_line1'] ?? ''}, ${_selectedAddress!['city'] ?? ''}, ${_selectedAddress!['country'] ?? ''}\nPhone: ${_selectedAddress!['phone'] ?? ''}'
+                      : 'No address selected'),
+                  trailing: TextButton(
+                    onPressed: _showAddressSelector,
+                    child: Text(_selectedAddress == null || _selectedAddress!.isEmpty ? 'Add Address' : 'Change'),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              _buildPaymentMethods(),
-              const SizedBox(height: 24),
-              if (selectedPaymentMethod != null) ...[
+                if (_addresses.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('No address found. Please add an address.', style: TextStyle(color: Colors.red)),
+                  ),
+                const SizedBox(height: 24),
                 Text(
-                  'Enter Payment Details',
+                  'Select Payment Method',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
-                _buildPaymentForm(),
+                const SizedBox(height: 24),
+                _buildPaymentMethods(),
+                const SizedBox(height: 24),
+                if (selectedPaymentMethod != null) ...[
+                  Text(
+                    'Enter Payment Details',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Form(
+                    key: _formKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    child: _buildPaymentForm(),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                _buildOrderSummary(),
               ],
-              const SizedBox(height: 24),
-              _buildOrderSummary(),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
@@ -302,18 +354,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     }
                     final parts = value.split('/');
                     if (parts.length != 2) return 'Invalid format';
-                    
                     final month = int.tryParse(parts[0]);
                     final year = int.tryParse(parts[1]);
-                    
                     if (month == null || year == null) return 'Invalid format';
                     if (month < 1 || month > 12) return 'Invalid month';
-                    
                     final now = DateTime.now();
                     final cardYear = 2000 + year;
                     if (cardYear < now.year) return 'Card expired';
                     if (cardYear == now.year && month < now.month) return 'Card expired';
-                    
                     return null;
                   },
                 ),
@@ -463,7 +511,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               elevation: 0,
             ),
-            onPressed: _isProcessing ? null : _processPayment,
+            // Disable Pay Now unless address and payment method are selected
+            onPressed: _isProcessing || _selectedAddress == null || selectedPaymentMethod == null ? null : _processPayment,
             child: _isProcessing
                 ? const SizedBox(
                     width: 22,
@@ -497,40 +546,76 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
       return;
     }
-
-    if (!(_formKey.currentState?.validate() ?? false)) {
+    if (_selectedAddress == null || _selectedAddress!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please select an address'),
+          backgroundColor: AppColors.error,
+        ),
+      );
       return;
     }
-
+    // Validate payment input
+    if (!(_formKey.currentState?.validate() ?? false) || _accountController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter valid payment details'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     setState(() => _isProcessing = true);
-    
     try {
       final orderId = const Uuid().v4();
-      final currentUser = FirebaseService.currentUser;
-      
-      if (currentUser == null) {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
         throw Exception('User not logged in');
       }
+      final order = {
+        'id': orderId,
+        'user_id': user.id,
+        'items': widget.items.map((item) => item.toMap()).toList(),
+        'totalAmount': widget.totalAmount,
+        'total': widget.totalAmount,
+        'paymentMethod': selectedPaymentMethod ?? '',
+        'paymentId': _accountController.text,
+        'orderDate': DateTime.now().toIso8601String(),
+        'address_id': _selectedAddress?['id'],
+        'shipping_address': _selectedAddress,
+      };
+      await Supabase.instance.client.from('orders').insert(order);
 
-      final order = PurchaseOrder(
-        id: orderId,
-        userId: currentUser.uid,
-        userEmail: currentUser.email ?? '',
-        items: widget.items,
-        totalAmount: widget.totalAmount,
-        paymentMethod: selectedPaymentMethod ?? '',
-        paymentId: _accountController.text,
-        orderDate: DateTime.now(),
-      );
+      // Mark all ordered products as sold
+      for (final item in widget.items) {
+        await Supabase.instance.client
+            .from('products')
+            .update({'is_sold': true})
+            .eq('id', item.productId);
+      }
 
-      // Create order in Firestore
-      await FirebaseService.createOrder(order.toMap());
-      
+      // Insert a notification for admins
+      await Supabase.instance.client.from('notifications').insert({
+        'type': 'new_order',
+        'message': 'A new order has been placed: #$orderId',
+        'order_id': orderId,
+        'is_read': false,
+        'read': false,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      // Create payment record
+      await Supabase.instance.client.from('payments').insert({
+        'order_id': orderId,
+        'user_id': user.id,
+        'method': selectedPaymentMethod,
+        'amount': widget.totalAmount,
+        'status': 'pending',
+      });
       // Clear the cart after successful order
       if (mounted) {
         Provider.of<CartProvider>(context, listen: false).clear();
       }
-      
       if (mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -539,12 +624,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
             backgroundColor: Colors.green,
           ),
         );
-
         // Navigate to order details
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => OrderDetailScreen(order: order),
+            builder: (context) => OrderDetailScreen(order: PurchaseOrder.fromMap(order)),
           ),
         );
       }
@@ -622,6 +706,41 @@ class ExpiryDateInputFormatter extends TextInputFormatter {
       text: string,
       selection: TextSelection.collapsed(
         offset: string.length,
+      ),
+    );
+  }
+} 
+
+class AddressSelectorSheet extends StatelessWidget {
+  final List<Map<String, dynamic>> addresses;
+  final Map<String, dynamic>? selected;
+  const AddressSelectorSheet({required this.addresses, this.selected, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(title: Text('Select Address', style: TextStyle(fontWeight: FontWeight.bold))),
+          ...addresses.map((address) => RadioListTile<Map<String, dynamic>>(
+                value: address,
+                groupValue: selected,
+                title: Text('${address['label'] ?? ''}: ${address['address_line1'] ?? ''}, ${address['city'] ?? ''}, ${address['country'] ?? ''}'),
+                onChanged: (val) => Navigator.pop(context, val),
+              )),
+          ListTile(
+            leading: Icon(Icons.add),
+            title: Text('Add New Address'),
+            onTap: () async {
+              Navigator.pop(context);
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddressBookScreen()),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

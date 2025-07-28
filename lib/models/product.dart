@@ -2,15 +2,25 @@ class Product {
   final String id;
   final String name;
   final double price;
-  final String image;
+  final String imageUrl;
   final String description;
+  final String? categoryId;
+  final String? categoryName; // For display only, not stored in DB
+  bool isFavorite;
+  double averageRating;
+  final bool isSold;
 
   Product({
     required this.id,
     required this.name,
     required this.price,
-    required this.image,
+    required this.imageUrl,
     required this.description,
+    this.categoryId,
+    this.categoryName,
+    this.isFavorite = false,
+    this.averageRating = 0.0,
+    this.isSold = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -18,8 +28,9 @@ class Product {
       'id': id,
       'name': name,
       'price': price,
-      'image': image,
+      'image_url': imageUrl,
       'description': description,
+      'category_id': categoryId,
     };
   }
 
@@ -28,8 +39,13 @@ class Product {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       price: (map['price'] ?? 0.0).toDouble(),
-      image: map['image'] ?? '',
+      imageUrl: map['image_url'] ?? '',
       description: map['description'] ?? '',
+      categoryId: map['category_id'],
+      categoryName: map['category_name'], // Only if joined in query
+      isFavorite: map['isFavorite'] ?? false,
+      averageRating: (map['averageRating'] ?? 0.0).toDouble(),
+      isSold: map['is_sold'] ?? false,
     );
   }
 } 

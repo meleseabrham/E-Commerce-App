@@ -1,12 +1,10 @@
 import 'package:flutter/foundation.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
-import '../services/firebase_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CartProvider with ChangeNotifier {
   final Map<String, CartItem> _items = {};
-  final _firestore = FirebaseFirestore.instance;
 
   Map<String, CartItem> get items => {..._items};
 
@@ -22,25 +20,20 @@ class CartProvider with ChangeNotifier {
 
   // Load cart items for current user
   Future<void> loadUserCart() async {
-    final user = FirebaseService.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
-
     try {
-      final cartDoc = await _firestore
-          .collection('carts')
-          .doc(user.uid)
-          .get();
-
-      if (cartDoc.exists) {
-        final cartData = cartDoc.data() as Map<String, dynamic>;
+      final response = await Supabase.instance.client
+          .from('carts')
+          .select()
+          .eq('user_id', user.id)
+          .single();
+      if (response != null && response['items'] != null) {
         _items.clear();
-        
-        if (cartData.containsKey('items')) {
-          final items = cartData['items'] as List<dynamic>;
-          for (var item in items) {
-            final cartItem = CartItem.fromMap(item as Map<String, dynamic>);
-            _items[cartItem.id] = cartItem;
-          }
+        final items = response['items'] as List<dynamic>;
+        for (var item in items) {
+          final cartItem = CartItem.fromMap(item as Map<String, dynamic>);
+          _items[cartItem.id] = cartItem;
         }
         notifyListeners();
       }
@@ -50,14 +43,13 @@ class CartProvider with ChangeNotifier {
   }
 
   // Save cart to Firestore
-  Future<void> _saveCart() async {
-    final user = FirebaseService.currentUser;
+  Future<void> saveCart() async {
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
-
     try {
-      await _firestore.collection('carts').doc(user.uid).set({
-        'userId': user.uid,
-        'updatedAt': FieldValue.serverTimestamp(),
+      await Supabase.instance.client.from('carts').upsert({
+        'user_id': user.id,
+        'updated_at': DateTime.now().toIso8601String(),
         'items': _items.values.map((item) => item.toMap()).toList(),
       });
     } catch (e) {
@@ -75,7 +67,7 @@ class CartProvider with ChangeNotifier {
           name: existingCartItem.name,
           price: existingCartItem.price,
           quantity: existingCartItem.quantity + 1,
-          image: existingCartItem.image,
+          imageUrl: existingCartItem.imageUrl,
         ),
       );
     } else {
@@ -87,17 +79,17 @@ class CartProvider with ChangeNotifier {
           name: product.name,
           price: product.price,
           quantity: 1,
-          image: product.image,
+          imageUrl: product.imageUrl,
         ),
       );
     }
-    _saveCart();
+    saveCart();
     notifyListeners();
   }
 
   void removeItem(String productId) {
     _items.remove(productId);
-    _saveCart();
+    saveCart();
     notifyListeners();
   }
 
@@ -115,17 +107,17 @@ class CartProvider with ChangeNotifier {
           name: existingCartItem.name,
           price: existingCartItem.price,
           quantity: quantity,
-          image: existingCartItem.image,
+          imageUrl: existingCartItem.imageUrl,
         ),
       );
-      _saveCart();
+      saveCart();
       notifyListeners();
     }
   }
 
   void clear() {
     _items.clear();
-    _saveCart();
+    saveCart();
     notifyListeners();
   }
 } 

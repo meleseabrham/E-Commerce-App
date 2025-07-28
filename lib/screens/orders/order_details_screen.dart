@@ -141,7 +141,7 @@ class OrderDetailsScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         image: DecorationImage(
-                          image: AssetImage(item.image),
+                          image: AssetImage(item.imageUrl),
                           fit: BoxFit.cover,
                         ),
                       ),

@@ -60,7 +60,15 @@ class _OrderReceiptCheckerState extends State<OrderReceiptChecker> {
         setState(() => _error = 'Receipt not available');
       }
     } catch (e) {
-      setState(() => _error = 'Error downloading receipt: $e');
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('socketexception') ||
+          errorStr.contains('failed host lookup') ||
+          errorStr.contains('no address associated') ||
+          errorStr.contains('clientexception')) {
+        setState(() => _error = 'No internet connection. Please check your connection and try again.');
+      } else {
+        setState(() => _error = 'Error downloading receipt. Please try again later.');
+      }
     } finally {
       setState(() => _isLoading = false);
     }

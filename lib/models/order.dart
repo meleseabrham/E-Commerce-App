@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'cart_item.dart';
 
 class PurchaseOrder {
@@ -24,16 +23,18 @@ class PurchaseOrder {
     this.status = 'pending',
   });
 
+  double get total => totalAmount;
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'userId': userId,
-      'userEmail': userEmail,
+      'user_id': userId,
+      'user_email': userEmail,
       'items': items.map((item) => item.toMap()).toList(),
-      'totalAmount': totalAmount,
-      'paymentMethod': paymentMethod,
-      'paymentId': paymentId,
-      'orderDate': Timestamp.fromDate(orderDate),
+      'total_amount': totalAmount,
+      'payment_method': paymentMethod,
+      'payment_id': paymentId,
+      'order_date': orderDate.toIso8601String(),
       'status': status,
     };
   }
@@ -42,35 +43,29 @@ class PurchaseOrder {
     try {
       final itemsList = map['items'];
       List<CartItem> parsedItems = [];
-
       if (itemsList != null && itemsList is List) {
         parsedItems = itemsList
-            .whereType<Map<String, dynamic>>()
-            .map((item) => CartItem.fromMap(item))
+            .map((item) => item is Map<String, dynamic> ? CartItem.fromMap(item) : CartItem.fromMap(Map<String, dynamic>.from(item)))
             .toList();
-      } else {
-        print('Warning: Order items is null or not a List. Using empty list.');
       }
-
       return PurchaseOrder(
         id: map['id']?.toString() ?? '',
-        userId: map['userId']?.toString() ?? '',
-        userEmail: map['userEmail']?.toString() ?? '',
+        userId: map['user_id']?.toString() ?? '',
+        userEmail: map['user_email']?.toString() ?? '',
         items: parsedItems,
-        totalAmount: (map['totalAmount'] as num?)?.toDouble() ?? 0.0,
-        paymentMethod: map['paymentMethod']?.toString() ?? '',
-        paymentId: map['paymentId']?.toString() ?? '',
-        orderDate: map['orderDate'] is Timestamp 
-            ? (map['orderDate'] as Timestamp).toDate()
-            : DateTime.now(),
+        totalAmount: (map['total_amount'] ?? map['total'] ?? map['totalAmount'] as num?)?.toDouble() ?? 0.0,
+        paymentMethod: map['payment_method']?.toString() ?? map['paymentMethod']?.toString() ?? '',
+        paymentId: map['paymentId']?.toString() ?? map['payment_id']?.toString() ?? '',
+        orderDate: map['order_date'] != null
+            ? DateTime.tryParse(map['order_date'].toString()) ?? DateTime.now()
+            : (map['orderDate'] != null ? DateTime.tryParse(map['orderDate'].toString()) ?? DateTime.now() : DateTime.now()),
         status: map['status']?.toString() ?? 'pending',
       );
     } catch (e) {
       print('Error parsing order: $e');
-      // Return an empty order with minimal data to prevent app crashes
       return PurchaseOrder(
         id: map['id']?.toString() ?? '',
-        userId: map['userId']?.toString() ?? '',
+        userId: map['user_id']?.toString() ?? '',
         userEmail: '',
         items: [],
         totalAmount: 0.0,

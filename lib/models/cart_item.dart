@@ -6,7 +6,7 @@ class CartItem {
   final String name;
   final int quantity;
   final double price;
-  final String image;
+  final String imageUrl;
 
   CartItem({
     required this.id,
@@ -14,7 +14,7 @@ class CartItem {
     required this.name,
     required this.quantity,
     required this.price,
-    required this.image,
+    required this.imageUrl,
   });
 
   double get total => price * quantity;
@@ -24,8 +24,10 @@ class CartItem {
       id: productId,
       name: name,
       price: price,
-      image: image,
+      imageUrl: imageUrl,
       description: '', // Since cart items don't store description
+      categoryId: '',
+      categoryName: '',
     );
   }
 
@@ -36,7 +38,7 @@ class CartItem {
       'name': name,
       'quantity': quantity,
       'price': price,
-      'image': image,
+      'imageUrl': imageUrl,
       'total': total,
     };
   }
@@ -48,7 +50,7 @@ class CartItem {
       name: map['name'] ?? '',
       quantity: map['quantity']?.toInt() ?? 0,
       price: (map['price'] ?? 0.0).toDouble(),
-      image: map['image'] ?? '',
+      imageUrl: map['imageUrl'] ?? '',
     );
   }
 
@@ -58,7 +60,7 @@ class CartItem {
     String? name,
     int? quantity,
     double? price,
-    String? image,
+    String? imageUrl,
   }) {
     return CartItem(
       id: id ?? this.id,
@@ -66,7 +68,7 @@ class CartItem {
       name: name ?? this.name,
       quantity: quantity ?? this.quantity,
       price: price ?? this.price,
-      image: image ?? this.image,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 } 

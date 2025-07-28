@@ -4,8 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../services/firebase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
 import '../home/home_screen.dart';
 import '../../widgets/social_footer.dart';
@@ -14,6 +13,8 @@ import '../../widgets/order_receipt_checker.dart';
 import 'package:mehal_gebeya/theme/app_colors.dart'; // Added import for AppColors
 import 'package:mehal_gebeya/screens/auth/forgot_password_screen.dart'; // Added import for ForgotPasswordScreen
 import 'package:mehal_gebeya/screens/auth/registration_screen.dart'; // Added import for RegistrationScreen
+import 'package:mehal_gebeya/providers/cart_provider.dart'; // Added import for CartProvider
+import 'package:provider/provider.dart'; // Added import for Provider
 
 
 class LoginScreen extends StatefulWidget {
@@ -38,174 +39,95 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _signInWithEmail() async {
-    // Dismiss keyboard
-    FocusScope.of(context).unfocus();
+ Future<void> _signInWithEmail() async {
+  FocusScope.of(context).unfocus();
 
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      final userCredential = await FirebaseService.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text,
+  try {
+    final response = await Supabase.instance.client.auth.signInWithPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
+
+    if (response.user != null && mounted) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
+      await prefs.setString('user_email', response.user!.email ?? '');
+      await prefs.setString('user_id', response.user!.id);
+
+      _emailController.clear();
+      _passwordController.clear();
+
+      // Load user cart after login
+      if (mounted) {
+        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+        await cartProvider.loadUserCart();
+      }
+
+      // Redirect to payment if needed
+      final userId = response.user!.id;
+      final userProfile = await Supabase.instance.client
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .single();
+
+      if (userProfile != null && userProfile['is_admin'] == true) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/dashboard',
+          arguments: {'showLoginSuccess': true},
+        );
+      } else {
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: {'showLoginSuccess': true},
+        );
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed.'),
+          backgroundColor: Colors.red,
+        ),
       );
-
-      if (userCredential != null && userCredential.user != null && mounted) {
-        // Update last login timestamp in Firestore
-        await FirebaseService.updateUserLastLogin(userCredential.user!.uid);
-        
-        // Save login state and user info
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('is_logged_in', true);
-        await prefs.setString('user_email', userCredential.user!.email ?? '');
-        await prefs.setString('user_id', userCredential.user!.uid);
-
-        if (mounted) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Login successful! Welcome to MeHal Gebeya'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
-
-          // Clear the form
-          _emailController.clear();
-          _passwordController.clear();
-
-          // Call onLoginSuccess if provided
-          if (widget.onLoginSuccess != null) {
-            widget.onLoginSuccess!();
-            return;
-          }
-
-          // Navigate after showing the message
-          Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) {
-              Navigator.pushReplacementNamed(context, '/home');
-            }
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        String errorMessage = 'Login failed. Please try again.';
-        
-        if (e.toString().contains('user-not-found')) {
-          errorMessage = 'No account found with this email. Please register first.';
-        } else if (e.toString().contains('wrong-password')) {
-          errorMessage = 'Incorrect password. Please try again.';
-          // Clear only password field on wrong password
-          _passwordController.clear();
-        } else if (e.toString().contains('invalid-email')) {
-          errorMessage = 'Please enter a valid email address.';
-        } else if (e.toString().contains('network-request-failed')) {
-          errorMessage = 'Network error. Please check your internet connection.';
-        } else if (e.toString().contains('too-many-requests')) {
-          errorMessage = 'Too many failed attempts. Please try again later.';
-          // Clear both fields on too many attempts
-          _emailController.clear();
-          _passwordController.clear();
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-            action: e.toString().contains('user-not-found')
-                ? SnackBarAction(
-                    label: 'Register',
-                    textColor: Colors.white,
-                    onPressed: () {
-                      // Clear fields before navigating
-                      _emailController.clear();
-                      _passwordController.clear();
-                      Navigator.pushNamed(context, '/register');
-                    },
-                  )
-                : null,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final userCredential = await FirebaseService.signInWithGoogle();
-
-      if (userCredential != null && userCredential.user != null && mounted) {
-        // Update last login timestamp in Firestore
-        await FirebaseService.updateUserLastLogin(userCredential.user!.uid);
-        
-        // Save login state and user info
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('is_logged_in', true);
-        await prefs.setString('user_email', userCredential.user!.email ?? '');
-        await prefs.setString('user_id', userCredential.user!.uid);
-
-        if (mounted) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Google sign-in successful! Welcome to MeHal Gebeya'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
-
-          // Clear any existing form data
-          _emailController.clear();
-          _passwordController.clear();
-
-          // Call onLoginSuccess if provided
-          if (widget.onLoginSuccess != null) {
-            widget.onLoginSuccess!();
-            return;
-          }
-
-          // Navigate after showing the message
-          Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) {
-              Navigator.pushReplacementNamed(context, '/home');
-            }
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        String errorMessage = 'Google sign-in failed. Please try again.';
-        
-        if (e.toString().contains('network-request-failed')) {
-          errorMessage = 'Network error. Please check your internet connection.';
-        } else if (e.toString().contains('sign_in_canceled')) {
-          errorMessage = 'Sign-in cancelled.';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+  } catch (e) {
+    final errorStr = e.toString();
+    if (errorStr.contains('SocketException') ||
+        errorStr.contains('Failed host lookup') ||
+        errorStr.contains('No address associated')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No internet connection.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else if (errorStr.contains('invalid_credentials')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invalid email and password. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed. Please try again later.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
+
+  // TODO: Implement Supabase social login if needed. Removed Google login button and _signInWithGoogle reference.
 
   @override
   Widget build(BuildContext context) {
@@ -328,45 +250,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: AppColors.textSecondary.withOpacity(0.3))),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('OR', style: TextStyle(color: AppColors.textSecondary)),
-                        ),
-                        Expanded(child: Divider(color: AppColors.textSecondary.withOpacity(0.3))),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.textPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: AppColors.textSecondary.withOpacity(0.2)),
-                        ),
-                        elevation: 0,
-                      ),
-                      icon: Image.asset('assets/logo/google.png', height: 24),
-                      label: const Text(
-                        'Continue with Google',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
-                      onPressed: _isLoading ? null : _signInWithGoogle,
-                    ),
-                    const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {
+                         Navigator.of(context).pop(); 
                        showDialog(
                          context: context,
                          builder: (context) => Dialog(
                            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                            child: SizedBox(
-                             width: 400,
+                             
+                             height: 500,
                              child: ForgotPasswordScreen(),
                            ),
                          ),
@@ -381,13 +275,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Text("Don't have an account? "),
                        GestureDetector(
                          onTap: () {
+                           Navigator.of(context).pop(); // Close the login dialog first
                            showDialog(
                              context: context,
                              builder: (context) => Dialog(
                                insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                                child: SizedBox(
-                                 width: 400,
+                               
+                                 height: 500,
                                  child: RegistrationScreen(),
                                ),
                              ),
@@ -396,6 +292,54 @@ class _LoginScreenState extends State<LoginScreen> {
                          child: Text('Register', style: TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold)),
                        ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Text('OR'),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      icon: Image.network(
+                        'https://lpndjssicpcnssmngqln.supabase.co/storage/v1/object/sign/mehalgebeya/assets/logo/google.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yMjMyMzlhYy1jM2IwLTQ5ZDEtYmQzYS0wYzg4NWMwNDkxZmYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWhhbGdlYmV5YS9hc3NldHMvbG9nby9nb29nbGUucG5nIiwiaWF0IjoxNzUyNzYwMDU1LCJleHAiOjE3ODQyOTYwNTV9.5_zHriiLO0wjWJlraRuFwab1phtyNWBZACTI-UEgxL0',
+                        height: 24,
+                        width: 24,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Image.asset(
+                          'assets/logo/google.png',
+                          height: 24,
+                          width: 24,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      label: const Text('Continue with Google', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                        side: const BorderSide(color: Colors.grey, width: 1),
+                      ),
+                      onPressed: () async {
+                        try {
+                          await Supabase.instance.client.auth.signInWithOAuth(
+                            OAuthProvider.google,
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Google sign-in failed: $e')),
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),

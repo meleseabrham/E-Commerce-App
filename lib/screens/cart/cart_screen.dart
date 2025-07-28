@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../models/cart_item.dart';
 import '../../providers/cart_provider.dart';
-import '../../services/firebase_service.dart';
 import 'package:provider/provider.dart';
 import '../payment/payment_screen.dart';
 import '../auth/login_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -25,7 +25,7 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _loadCart() async {
     // Allow guests to view cart, but only load user cart if logged in
-    final user = FirebaseService.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
         await Provider.of<CartProvider>(context, listen: false).loadUserCart();
@@ -47,6 +47,8 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+    final cart = Provider.of<CartProvider>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shopping Cart'),
@@ -55,6 +57,56 @@ class _CartScreenState extends State<CartScreen> {
             icon: const Icon(Icons.delete_outline),
             onPressed: () => _clearCart(context),
           ),
+          if (user == null) ...[
+            TextButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    child: SizedBox(
+                      height: 500,
+                      width: 400,
+                      child: LoginScreen(
+                        onLoginSuccess: () {
+                          // After login, sync cart to Supabase and proceed to payment
+                          cart.saveCart();
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PaymentScreen(
+                                items: cart.items.values.toList(),
+                                totalAmount: cart.totalAmount,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: Text('Login', style: TextStyle(color: Colors.white)),
+            ),
+            // If RegistrationScreen is not defined, comment out or replace with a placeholder
+            // TextButton(
+            //   onPressed: () {
+            //     showDialog(
+            //       context: context,
+            //       builder: (context) => Dialog(child: RegistrationScreen()),
+            //     );
+            //   },
+            //   child: Text('Register', style: TextStyle(color: Colors.white)),
+            // ),
+          ] else ...[
+            IconButton(
+              icon: Icon(Icons.person),
+onPressed: () {
+    Navigator.pushNamed(context, '/account');
+  },
+            ),
+          ]
         ],
       ),
       body: _isLoading
@@ -188,25 +240,34 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _proceedToCheckout(BuildContext context, CartProvider cart) {
+    final user = Supabase.instance.client.auth.currentUser;
+    final cart = Provider.of<CartProvider>(context, listen: false);
     if (cart.items.isEmpty) return;
-    final user = FirebaseService.currentUser;
     if (user == null) {
-      // Redirect to login, then continue to payment after login
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => LoginScreen(
-            onLoginSuccess: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PaymentScreen(
-                    items: cart.items.values.toList(),
-                    totalAmount: cart.totalAmount,
+      // Show only login dialog (no option dialog)
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          child: SizedBox(
+            height: 500,
+            width: 400,
+            child: LoginScreen(
+              onLoginSuccess: () {
+                // After login, sync cart to Supabase and proceed to payment
+                cart.saveCart();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PaymentScreen(
+                      items: cart.items.values.toList(),
+                      totalAmount: cart.totalAmount,
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       );
@@ -224,7 +285,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _clearCart(BuildContext context) {
-    if (Provider.of<CartProvider>(context, listen: false).items.isEmpty) return;
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    if (cart.items.isEmpty) return;
 
     showDialog(
       context: context,
@@ -238,7 +300,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
           TextButton(
             onPressed: () {
-              Provider.of<CartProvider>(context, listen: false).clear();
+              cart.clear();
               Navigator.pop(ctx);
             },
             child: Text(
@@ -273,11 +335,22 @@ class CartItemWidget extends StatelessWidget {
               height: 80,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                image: DecorationImage(
-                  image: AssetImage(cartItem.image),
-                  fit: BoxFit.cover,
-                ),
               ),
+              child: cartItem.imageUrl.startsWith('http')
+                  ? Image.network(
+                      cartItem.imageUrl,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                    )
+                  : Image.asset(
+                      cartItem.imageUrl,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                    ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -369,16 +442,16 @@ class CartItemWidget extends StatelessWidget {
   }
 
   void _updateQuantity(BuildContext context, int newQuantity) {
+    final cart = Provider.of<CartProvider>(context, listen: false);
     if (newQuantity <= 0) {
       _removeItem(context);
       return;
     }
-    Provider.of<CartProvider>(context, listen: false)
-        .updateQuantity(cartItem.productId, newQuantity);
+    cart.updateQuantity(cartItem.productId, newQuantity);
   }
 
   void _removeItem(BuildContext context) {
-    Provider.of<CartProvider>(context, listen: false)
-        .removeItem(cartItem.productId);
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    cart.removeItem(cartItem.productId);
   }
 } 
