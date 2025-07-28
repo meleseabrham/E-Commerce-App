@@ -51,7 +51,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     Navigator.pop(context); // Close dialog
                     Navigator.pushNamedAndRemoveUntil(
                       context,
-                      '/login',
+                      '/home',
                       (route) => false,
                     );
                   },

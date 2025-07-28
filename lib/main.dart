@@ -26,10 +26,15 @@ import 'providers/wishlist_provider.dart';
 import 'screens/account/personal_info_screen.dart';
 import 'screens/account/change_password_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load();
+  if (kIsWeb) {
+    await dotenv.load(fileName: 'assets/.env');
+  } else {
+    await dotenv.load();
+  }
   final supabaseUrl = dotenv.env['SUPABASE_URL']!;
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']!;
   final prefs = await SharedPreferences.getInstance();
