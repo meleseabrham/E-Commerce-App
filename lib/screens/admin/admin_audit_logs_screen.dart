@@ -137,11 +137,7 @@ class _AdminAuditLogsScreenState extends State<AdminAuditLogsScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-              (route) => false,
-            );
+            Navigator.pushReplacementNamed(context, '/dashboard');
           },
         ),
       ),

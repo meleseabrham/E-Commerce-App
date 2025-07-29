@@ -13,18 +13,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _notificationCount = 0;
   List<Map<String, dynamic>> _latestNotifications = [];
   RealtimeChannel? _notificationChannel;
+  bool _hasShownLoginMessage = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login successful! Welcome to MeHal Gebeya'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['showLoginSuccess'] == true && !_hasShownLoginMessage) {
+        _hasShownLoginMessage = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login successful! Welcome to MeHal Gebeya'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     });
     _fetchAdminNotifications();
     _subscribeToAdminNotifications();

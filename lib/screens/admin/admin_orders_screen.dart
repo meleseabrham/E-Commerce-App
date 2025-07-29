@@ -6,6 +6,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:csv/csv.dart';
 import 'admin_dashboard_screen.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
 class AdminOrdersScreen extends StatefulWidget {
   final String status;
@@ -209,6 +214,102 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     // }
   }
 
+  void _exportToPDF() async {
+    if (_filteredOrders.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No orders to export.')),
+      );
+      return;
+    }
+
+    try {
+      final pdf = pw.Document();
+      
+      // Add title
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Header(
+                  level: 0,
+                  child: pw.Text('Orders Report', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text('Generated on: ${DateTime.now().toString().split('.')[0]}'),
+                pw.SizedBox(height: 20),
+                pw.Table(
+                  border: pw.TableBorder.all(),
+                  children: [
+                    // Header row
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Order ID', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Customer', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Status', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Date', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                      ],
+                    ),
+                    // Data rows
+                    ..._filteredOrders.map((order) => pw.TableRow(
+                      children: [
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text(order['id'].toString().substring(0, 8))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text(order['users']?['full_name'] ?? order['users']?['email'] ?? '')),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text(order['status'] ?? '')),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('\$${(order['total'] ?? order['totalAmount'] ?? 0).toStringAsFixed(2)}')),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text(order['created_at']?.toString().split('T').first ?? '')),
+                      ],
+                    )).toList(),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Save PDF
+      if (kIsWeb) {
+        // Web implementation
+        final bytes = await pdf.save();
+        // TODO: Implement web download
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF export for web is not yet implemented.')),
+        );
+      } else {
+        // Mobile implementation
+        final status = await Permission.storage.request();
+        if (status.isGranted) {
+          final directory = await getExternalStorageDirectory();
+          final file = File('${directory?.path}/orders_report.pdf');
+          await file.writeAsBytes(await pdf.save());
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('PDF saved to: ${file.path}'),
+              action: SnackBarAction(
+                label: 'Open',
+                onPressed: () async {
+                  // TODO: Open file with default app
+                },
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Storage permission denied.')),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating PDF: $e')),
+      );
+    }
+  }
+
   void _toggleSelectOrder(String orderId) {
     setState(() {
       if (_selectedOrderIds.contains(orderId)) {
@@ -281,6 +382,104 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     // }
   }
 
+  void _exportSelectedToPDF() async {
+    final selectedOrders = _filteredOrders.where((o) => _selectedOrderIds.contains(o['id'].toString())).toList();
+    if (selectedOrders.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No orders selected for export.')),
+      );
+      return;
+    }
+
+    try {
+      final pdf = pw.Document();
+      
+      // Add title
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Header(
+                  level: 0,
+                  child: pw.Text('Selected Orders Report', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text('Generated on: ${DateTime.now().toString().split('.')[0]}'),
+                pw.Text('Total Selected: ${selectedOrders.length}'),
+                pw.SizedBox(height: 20),
+                pw.Table(
+                  border: pw.TableBorder.all(),
+                  children: [
+                    // Header row
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Order ID', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Customer', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Status', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Date', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                      ],
+                    ),
+                    // Data rows
+                    ...selectedOrders.map((order) => pw.TableRow(
+                      children: [
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text(order['id'].toString().substring(0, 8))),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text(order['users']?['full_name'] ?? order['users']?['email'] ?? '')),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text(order['status'] ?? '')),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('\$${(order['total'] ?? order['totalAmount'] ?? 0).toStringAsFixed(2)}')),
+                        pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text(order['created_at']?.toString().split('T').first ?? '')),
+                      ],
+                    )).toList(),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Save PDF
+      if (kIsWeb) {
+        // Web implementation
+        final bytes = await pdf.save();
+        // TODO: Implement web download
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF export for web is not yet implemented.')),
+        );
+      } else {
+        // Mobile implementation
+        final status = await Permission.storage.request();
+        if (status.isGranted) {
+          final directory = await getExternalStorageDirectory();
+          final file = File('${directory?.path}/selected_orders_report.pdf');
+          await file.writeAsBytes(await pdf.save());
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('PDF saved to: ${file.path}'),
+              action: SnackBarAction(
+                label: 'Open',
+                onPressed: () async {
+                  // TODO: Open file with default app
+                },
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Storage permission denied.')),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating PDF: $e')),
+      );
+    }
+  }
+
   Widget _buildStatusChip(String status) {
     Color color;
     switch (status) {
@@ -306,9 +505,14 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     return Tooltip(
       message: status[0].toUpperCase() + status.substring(1),
       child: Chip(
-        label: Text(status[0].toUpperCase() + status.substring(1)),
+        label: Text(
+          status[0].toUpperCase() + status.substring(1),
+          style: TextStyle(color: Colors.white, fontSize: 11), // Reduced font size
+        ),
         backgroundColor: color,
-        labelStyle: TextStyle(color: Colors.white),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, // Make chip more compact
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Reduced padding
+        labelPadding: EdgeInsets.symmetric(horizontal: 4), // Reduced label padding
       ),
     );
   }
@@ -477,13 +681,13 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                 onChanged: (val) => _toggleSelectOrder(order['id'].toString()),
               ),
               CircleAvatar(
-                radius: 24,
+                radius: 20, // Reduced from 24
                 backgroundColor: Colors.grey[200],
                 child: order['users']?['full_name'] != null
-                    ? Text(order['users']['full_name'][0].toUpperCase(), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))
-                    : Icon(Icons.person, size: 24, color: Colors.grey[700]),
+                    ? Text(order['users']['full_name'][0].toUpperCase(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
+                    : Icon(Icons.person, size: 20, color: Colors.grey[700]),
               ),
-              SizedBox(width: 16),
+              SizedBox(width: 12), // Reduced from 16
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -492,30 +696,34 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                       message: order['id'],
                       child: Text(
                         'Order #${order['id'].toString().substring(0, 8)}',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14), // Reduced from 16
                       ),
                     ),
                     SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.email, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.email, size: 14, color: Colors.grey[600]), // Reduced from 16
                         SizedBox(width: 4),
-                        Tooltip(
-                          message: order['users']?['email'] ?? '',
-                          child: Text(
-                            order['users']?['full_name'] ?? order['users']?['email'] ?? '',
-                            style: TextStyle(color: Colors.grey[700]),
+                        Expanded( // Added Expanded to prevent overflow
+                          child: Tooltip(
+                            message: order['users']?['email'] ?? '',
+                            child: Text(
+                              order['users']?['full_name'] ?? order['users']?['email'] ?? '',
+                              style: TextStyle(color: Colors.grey[700], fontSize: 12), // Reduced font size
+                              overflow: TextOverflow.ellipsis, // Added overflow handling
+                            ),
                           ),
                         ),
                       ],
                     ),
                     SizedBox(height: 8),
-                    Row(
+                    Wrap( // Changed from Row to Wrap to handle overflow
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
                         _buildStatusChip(order['status'] ?? ''),
-                        // Add status change icon
                         PopupMenuButton<String>(
-                          icon: Icon(Icons.edit, color: Colors.grey[700], size: 20),
+                          icon: Icon(Icons.edit, color: Colors.grey[700], size: 18), // Reduced from 20
                           onSelected: (String newStatus) {
                             _updateOrderStatusAndNotify(
                               order['id'].toString(),
@@ -532,18 +740,17 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                             PopupMenuItem(value: 'cancelled', child: Text('Cancelled')),
                           ],
                         ),
-                        SizedBox(width: 12),
                         Tooltip(
                           message: 'Order Date',
                           child: Text(
                             order['created_at'] != null ? order['created_at'].toString().split('T').first : '',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                            style: TextStyle(color: Colors.grey[600], fontSize: 11), // Reduced from 13
                           ),
                         ),
                       ],
                     ),
                     SizedBox(height: 8),
-                    Text('Status: ${order['status']}', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Status: ${order['status']}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)), // Reduced font size
                   ],
                 ),
               ),
@@ -562,11 +769,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-              (route) => false,
-            );
+            Navigator.pushReplacementNamed(context, '/dashboard');
           },
         ),
         title: Text('Admin: Orders'),
@@ -611,181 +814,198 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
           ? Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          if (constraints.maxWidth < 600) {
-                            // Mobile: stack vertically or wrap
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.center,
-                              children: [
-                                _buildStatCard('Total Orders', _totalOrders.toString(), Icons.list_alt, Colors.blueGrey),
-                                _buildStatCard('Revenue', _totalRevenue.toStringAsFixed(2), Icons.attach_money, Colors.green),
-                                _buildStatCard('Pending', _countByStatus('pending').toString(), Icons.hourglass_empty, Colors.amber[800]!),
-                                _buildStatCard('Accepted', _countByStatus('accepted').toString(), Icons.check_circle, Colors.teal),
-                                _buildStatCard('Delivered', _countByStatus('delivered').toString(), Icons.local_shipping, Colors.green[700]!),
-                                _buildStatCard('Rejected', _countByStatus('rejected').toString(), Icons.cancel, Colors.red),
-                              ],
-                            );
-                          } else {
-                            // Desktop/tablet: horizontal row
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildStatCard('Total Orders', _totalOrders.toString(), Icons.list_alt, Colors.blueGrey),
-                            _buildStatCard('Revenue', _totalRevenue.toStringAsFixed(2), Icons.attach_money, Colors.green),
-                            _buildStatCard('Pending', _countByStatus('pending').toString(), Icons.hourglass_empty, Colors.amber[800]!),
-                            _buildStatCard('Accepted', _countByStatus('accepted').toString(), Icons.check_circle, Colors.teal),
-                            _buildStatCard('Delivered', _countByStatus('delivered').toString(), Icons.local_shipping, Colors.green[700]!),
-                            _buildStatCard('Rejected', _countByStatus('rejected').toString(), Icons.cancel, Colors.red),
-                          ],
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Checkbox(
-                              value: _selectedOrderIds.length == _filteredOrders.length && _filteredOrders.isNotEmpty,
-                              tristate: true,
-                              onChanged: (val) => _toggleSelectAll(val),
-                              activeColor: Theme.of(context).colorScheme.primary,
-                              checkColor: Theme.of(context).colorScheme.onPrimary,
-                            ),
-                            SizedBox(
-                              width: 250, // Adjust as needed for your layout
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  hintText: 'Search by user, order ID, or status',
-                                  prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                  filled: true,
-                                  fillColor: Theme.of(context).colorScheme.surface,
-                                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                                ),
-                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                                onChanged: (val) {
-                                  setState(() { _searchQuery = val; });
-                                  _applySearchAndSort();
-                                },
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            DropdownButton<String>(
-                              value: _sortBy,
-                              items: [
-                                DropdownMenuItem(value: 'date_desc', child: Text('Newest First')),
-                                DropdownMenuItem(value: 'date_asc', child: Text('Oldest First')),
-                                DropdownMenuItem(value: 'status', child: Text('Status')),
-                                DropdownMenuItem(value: 'total_desc', child: Text('Total (High-Low)')),
-                                DropdownMenuItem(value: 'total_asc', child: Text('Total (Low-High)')),
-                              ],
-                              onChanged: (val) {
-                                setState(() { _sortBy = val!; });
-                                _applySearchAndSort();
-                              },
-                              underline: Container(height: 2, color: Theme.of(context).colorScheme.primary),
-                              dropdownColor: Theme.of(context).colorScheme.surface,
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                              iconEnabledColor: Theme.of(context).colorScheme.primary,
-                            ),
-                            SizedBox(width: 16),
-                            ElevatedButton.icon(
-                              onPressed: _filteredOrders.isEmpty ? null : _exportToCSV,
-                              icon: Icon(Icons.download, color: Theme.of(context).colorScheme.primary),
-                              label: Text('Export CSV', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.surface,
-                                foregroundColor: Theme.of(context).colorScheme.primary,
-                                elevation: 0,
-                              ),
-                            ),
-                          ],
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (constraints.maxWidth < 600) {
+                              // Mobile: stack vertically or wrap
+                              return Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  _buildStatCard('Total Orders', _totalOrders.toString(), Icons.list_alt, Colors.blueGrey),
+                                  _buildStatCard('Revenue', _totalRevenue.toStringAsFixed(2), Icons.attach_money, Colors.green),
+                                  _buildStatCard('Pending', _countByStatus('pending').toString(), Icons.hourglass_empty, Colors.amber[800]!),
+                                  _buildStatCard('Accepted', _countByStatus('accepted').toString(), Icons.check_circle, Colors.teal),
+                                  _buildStatCard('Delivered', _countByStatus('delivered').toString(), Icons.local_shipping, Colors.green[700]!),
+                                  _buildStatCard('Rejected', _countByStatus('rejected').toString(), Icons.cancel, Colors.red),
+                                ],
+                              );
+                            } else {
+                              // Desktop/tablet: horizontal row
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildStatCard('Total Orders', _totalOrders.toString(), Icons.list_alt, Colors.blueGrey),
+                              _buildStatCard('Revenue', _totalRevenue.toStringAsFixed(2), Icons.attach_money, Colors.green),
+                              _buildStatCard('Pending', _countByStatus('pending').toString(), Icons.hourglass_empty, Colors.amber[800]!),
+                              _buildStatCard('Accepted', _countByStatus('accepted').toString(), Icons.check_circle, Colors.teal),
+                              _buildStatCard('Delivered', _countByStatus('delivered').toString(), Icons.local_shipping, Colors.green[700]!),
+                              _buildStatCard('Rejected', _countByStatus('rejected').toString(), Icons.cancel, Colors.red),
+                            ],
+                              );
+                            }
+                          },
                         ),
                       ),
-                    ),
-                    if (_selectedOrderIds.isNotEmpty)
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Container(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
-                          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('${_selectedOrderIds.length} selected', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                              Checkbox(
+                                value: _selectedOrderIds.length == _filteredOrders.length && _filteredOrders.isNotEmpty,
+                                tristate: true,
+                                onChanged: (val) => _toggleSelectAll(val),
+                                activeColor: Theme.of(context).colorScheme.primary,
+                                checkColor: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                              SizedBox(
+                                width: 250, // Adjust as needed for your layout
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    hintText: 'Search by user, order ID, or status',
+                                    prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                    filled: true,
+                                    fillColor: Theme.of(context).colorScheme.surface,
+                                    hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                                  ),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                                  onChanged: (val) {
+                                    setState(() { _searchQuery = val; });
+                                    _applySearchAndSort();
+                                  },
+                                ),
+                              ),
                               SizedBox(width: 16),
                               DropdownButton<String>(
-                                hint: Text('Bulk Update Status', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                                value: _sortBy,
                                 items: [
-                                  DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                                  DropdownMenuItem(value: 'accepted', child: Text('Accepted')),
-                                  DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
-                                  DropdownMenuItem(value: 'shipped', child: Text('Shipped')),
-                                  DropdownMenuItem(value: 'delivered', child: Text('Delivered')),
-                                  DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
+                                  DropdownMenuItem(value: 'date_desc', child: Text('Newest First')),
+                                  DropdownMenuItem(value: 'date_asc', child: Text('Oldest First')),
+                                  DropdownMenuItem(value: 'status', child: Text('Status')),
+                                  DropdownMenuItem(value: 'total_desc', child: Text('Total (High-Low)')),
+                                  DropdownMenuItem(value: 'total_asc', child: Text('Total (Low-High)')),
                                 ],
                                 onChanged: (val) {
-                                  if (val != null) _bulkUpdateStatus(val);
+                                  setState(() { _sortBy = val!; });
+                                  _applySearchAndSort();
                                 },
+                                underline: Container(height: 2, color: Theme.of(context).colorScheme.primary),
                                 dropdownColor: Theme.of(context).colorScheme.surface,
                                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                                 iconEnabledColor: Theme.of(context).colorScheme.primary,
                               ),
                               SizedBox(width: 16),
-                              ElevatedButton.icon(
-                                onPressed: _exportSelectedToCSV,
+                              PopupMenuButton<String>(
                                 icon: Icon(Icons.download, color: Theme.of(context).colorScheme.primary),
-                                label: Text('Export Selected', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.surface,
-                                  foregroundColor: Theme.of(context).colorScheme.primary,
-                                  elevation: 0,
-                                ),
+                                onSelected: (String format) {
+                                  switch (format) {
+                                    case 'csv':
+                                      _exportToCSV();
+                                      break;
+                                    case 'pdf':
+                                      _exportToPDF();
+                                      break;
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(value: 'csv', child: Text('Export as CSV')),
+                                  PopupMenuItem(value: 'pdf', child: Text('Export as PDF')),
+                                ],
                               ),
                             ],
                           ),
                         ),
                       ),
-                    Expanded(
-                      child: ListView.builder(
+                      if (_selectedOrderIds.isNotEmpty)
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Container(
+                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                            child: Row(
+                              children: [
+                                Text('${_selectedOrderIds.length} selected', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                                SizedBox(width: 16),
+                                DropdownButton<String>(
+                                  hint: Text('Bulk Update Status', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                                  items: [
+                                    DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                                    DropdownMenuItem(value: 'accepted', child: Text('Accepted')),
+                                    DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
+                                    DropdownMenuItem(value: 'shipped', child: Text('Shipped')),
+                                    DropdownMenuItem(value: 'delivered', child: Text('Delivered')),
+                                    DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) _bulkUpdateStatus(val);
+                                  },
+                                  dropdownColor: Theme.of(context).colorScheme.surface,
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                                  iconEnabledColor: Theme.of(context).colorScheme.primary,
+                                ),
+                                SizedBox(width: 16),
+                                PopupMenuButton<String>(
+                                  icon: Icon(Icons.download, color: Theme.of(context).colorScheme.primary),
+                                  onSelected: (String format) {
+                                    switch (format) {
+                                      case 'csv':
+                                        _exportSelectedToCSV();
+                                        break;
+                                      case 'pdf':
+                                        _exportSelectedToPDF();
+                                        break;
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(value: 'csv', child: Text('Export Selected as CSV')),
+                                    PopupMenuItem(value: 'pdf', child: Text('Export Selected as PDF')),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
                         padding: EdgeInsets.all(16),
                         itemCount: _filteredOrders.length,
                         itemBuilder: (context, index) => _buildOrderCard(_filteredOrders[index]),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ElevatedButton(
-                            onPressed: _currentPage > 1 ? () => _goToPage(_currentPage - 1) : null,
-                            child: Text('Previous'),
-                          ),
-                          SizedBox(width: 16),
-                          Text('Page $_currentPage of ${(_totalCount / _pageSize).ceil().clamp(1, 999)}'),
-                          SizedBox(width: 16),
-                          ElevatedButton(
-                            onPressed: _currentPage < (_totalCount / _pageSize).ceil() ? () => _goToPage(_currentPage + 1) : null,
-                            child: Text('Next'),
-                          ),
-                        ],
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              onPressed: _currentPage > 1 ? () => _goToPage(_currentPage - 1) : null,
+                              child: Text('Previous'),
+                            ),
+                            SizedBox(width: 16),
+                            Text('Page $_currentPage of ${(_totalCount / _pageSize).ceil().clamp(1, 999)}'),
+                            SizedBox(width: 16),
+                            ElevatedButton(
+                              onPressed: _currentPage < (_totalCount / _pageSize).ceil() ? () => _goToPage(_currentPage + 1) : null,
+                              child: Text('Next'),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
     );
   }

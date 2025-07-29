@@ -33,30 +33,73 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
     });
   }
 
-  Future<void> _addOrEditAddress({Map<String, dynamic>? address}) async {
+  Future<bool> _addOrEditAddress({Map<String, dynamic>? address}) async {
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
+    if (user == null) return false;
     final controller = TextEditingController(text: address?['address_line1'] ?? '');
     final labelController = TextEditingController(text: address?['label'] ?? '');
     final cityController = TextEditingController(text: address?['city'] ?? '');
     final countryController = TextEditingController(text: address?['country'] ?? '');
     final phoneController = TextEditingController(text: address?['phone'] ?? '+251');
     final isDefault = ValueNotifier<bool>(address?['is_default'] ?? false);
-    await showDialog(
+    final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(address == null ? 'Add Address' : 'Edit Address'),
         content: SingleChildScrollView(
           child: Column(
             children: [
-              TextField(controller: labelController, decoration: InputDecoration(labelText: 'Label (e.g. Home, Work)')),
-              TextField(controller: controller, decoration: InputDecoration(labelText: 'Address Line 1')),
-              TextField(controller: cityController, decoration: InputDecoration(labelText: 'City')),
-              TextField(controller: countryController, decoration: InputDecoration(labelText: 'Country')),
+              TextField(
+                controller: labelController, 
+                decoration: InputDecoration(
+                  labelText: 'Label',
+                  hintText: 'e.g. Home, Work, Office',
+                  prefixIcon: Icon(Icons.label),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: controller, 
+                decoration: InputDecoration(
+                  labelText: 'Address Line 1',
+                  hintText: 'Enter your street address',
+                  prefixIcon: Icon(Icons.location_on),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: cityController, 
+                decoration: InputDecoration(
+                  labelText: 'City',
+                  hintText: 'Enter your city',
+                  prefixIcon: Icon(Icons.location_city),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: countryController, 
+                decoration: InputDecoration(
+                  labelText: 'Country',
+                  hintText: 'Enter your country',
+                  prefixIcon: Icon(Icons.public),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16),
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: InputDecoration(labelText: 'Phone (+251...)'),
+                decoration: InputDecoration(
+                  labelText: 'Phone Number',
+                  hintText: '+2519/7********',
+                  helperText: 'Must start with +2517 or +2519 and be 13 digits',
+                  prefixIcon: Icon(Icons.phone),
+                  border: OutlineInputBorder(),
+                  errorStyle: TextStyle(color: Colors.red),
+                ),
                 maxLength: 13,
                 inputFormatters: [
                   TextInputFormatter.withFunction((oldValue, newValue) {
@@ -102,22 +145,69 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               final phone = phoneController.text.trim();
               if (!RegExp(r'^\+251[79]\d{8}$').hasMatch(phone)) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Phone must start with +2517 or +2519 and be 13 digits.')),
+                // Show validation error in a dialog instead of SnackBar
+                await showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Invalid Phone Number'),
+                    content: Text('Phone must start with +2517 or +2519 and be 13 digits.\n\nExample: +251912345678'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('OK'),
+                      ),
+                    ],
+                  ),
                 );
                 return;
               }
+              
+              // Validate other required fields
+              if (labelController.text.trim().isEmpty) {
+                await showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Missing Information'),
+                    content: Text('Please enter a label for this address (e.g., Home, Work)'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+                return;
+              }
+              
+              if (controller.text.trim().isEmpty) {
+                await showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Missing Information'),
+                    content: Text('Please enter the address details'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+                return;
+              }
+              
               final data = {
                 'user_id': user.id,
-                'label': labelController.text,
-                'address_line1': controller.text,
-                'city': cityController.text,
-                'country': countryController.text,
+                'label': labelController.text.trim(),
+                'address_line1': controller.text.trim(),
+                'city': cityController.text.trim(),
+                'country': countryController.text.trim(),
                 'phone': phone,
                 'is_default': isDefault.value,
               };
@@ -126,7 +216,7 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
               } else {
                 await Supabase.instance.client.from('user_addresses').update(data).eq('id', address['id']);
               }
-              Navigator.pop(context);
+              Navigator.pop(context, true);
               _fetchAddresses();
             },
             child: Text(address == null ? 'Add' : 'Save'),
@@ -134,6 +224,7 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
         ],
       ),
     );
+    return result ?? false;
   }
 
   Future<void> _deleteAddress(String id) async {
@@ -188,12 +279,19 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                           ),
                       ],
                     ),
+                    onTap: () {
+                      // Return the selected address to the previous screen
+                      Navigator.pop(context, address);
+                    },
                   ),
                 );
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _addOrEditAddress(),
+        onPressed: () async {
+          final added = await _addOrEditAddress();
+          // Don't call Navigator.pop here since _addOrEditAddress already handles it
+        },
         child: Icon(Icons.add),
         tooltip: 'Add Address',
       ),

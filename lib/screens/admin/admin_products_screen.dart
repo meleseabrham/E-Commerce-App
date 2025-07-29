@@ -5,7 +5,8 @@ import '../../widgets/admin_drawer.dart';
 import 'admin_dashboard_screen.dart';
 
 class AdminProductsScreen extends StatefulWidget {
-  const AdminProductsScreen({Key? key}) : super(key: key);
+  final String? filter;
+  const AdminProductsScreen({Key? key, this.filter}) : super(key: key);
 
   @override
   State<AdminProductsScreen> createState() => _AdminProductsScreenState();
@@ -44,8 +45,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
     try {
       final data = await Supabase.instance.client
         .from('products')
-        .select('*, categories(name), is_sold') // join category name and include is_sold
-        ;
+        .select('*, categories(name), is_sold');
       setState(() {
         _products = (data as List).map((e) => Product.fromMap({
           ...e,
@@ -64,8 +64,16 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
   }
 
   List<Product> get _filteredProducts {
-    if (_selectedCategoryId == null) return _products;
-    return _products.where((p) => p.categoryId == _selectedCategoryId).toList();
+    List<Product> filtered = _products;
+    if (_selectedCategoryId != null) {
+      filtered = filtered.where((p) => p.categoryId == _selectedCategoryId).toList();
+    }
+    if (widget.filter == 'available') {
+      filtered = filtered.where((p) => p.isSold != true).toList();
+    } else if (widget.filter == 'sold') {
+      filtered = filtered.where((p) => p.isSold == true).toList();
+    }
+    return filtered;
   }
 
   Widget _buildCategoryDropdown() {
@@ -215,11 +223,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-              (route) => false,
-            );
+            Navigator.pushReplacementNamed(context, '/dashboard');
           },
         ),
         title: Text('Admin: Products'),

@@ -92,11 +92,7 @@ class _AdminAnalysisScreenState extends State<AdminAnalysisScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-              (route) => false,
-            );
+            Navigator.pushReplacementNamed(context, '/dashboard');
           },
         ),
         title: Text('Admin: Analysis')),

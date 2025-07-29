@@ -62,9 +62,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
       builder: (context) => AddressSelectorSheet(addresses: _addresses, selected: _selectedAddress),
     );
     if (selected != null) {
-      setState(() {
-        _selectedAddress = selected;
-      });
+      if (selected.containsKey('refresh')) {
+        // Refresh addresses and select the newest one
+        await _fetchAddresses();
+        if (_addresses.isNotEmpty) {
+          setState(() {
+            _selectedAddress = _addresses.first;
+          });
+        }
+      } else if (selected.containsKey('select_from_book')) {
+        // User wants to select from address book
+        final addressFromBook = await Navigator.push<Map<String, dynamic>>(
+          context,
+          MaterialPageRoute(builder: (context) => AddressBookScreen()),
+        );
+        if (addressFromBook != null) {
+          setState(() {
+            _selectedAddress = addressFromBook;
+          });
+        }
+      } else {
+        setState(() {
+          _selectedAddress = selected;
+        });
+      }
     }
   }
 
@@ -80,55 +101,59 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(title: Text('Payment')),
       body: _isLoadingAddresses
           ? Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Address selection section
-                ListTile(
-                  leading: Icon(Icons.location_on),
-                  title: Text(_selectedAddress != null && _selectedAddress!.isNotEmpty
-                      ? '${_selectedAddress!['label'] ?? ''}: ${_selectedAddress!['address_line1'] ?? ''}, ${_selectedAddress!['city'] ?? ''}, ${_selectedAddress!['country'] ?? ''}\nPhone: ${_selectedAddress!['phone'] ?? ''}'
-                      : 'No address selected'),
-                  trailing: TextButton(
-                    onPressed: _showAddressSelector,
-                    child: Text(_selectedAddress == null || _selectedAddress!.isEmpty ? 'Add Address' : 'Change'),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // Address selection section
+                  ListTile(
+                    leading: Icon(Icons.location_on),
+                    title: Text(_selectedAddress != null && _selectedAddress!.isNotEmpty
+                        ? '${_selectedAddress!['label'] ?? ''}: ${_selectedAddress!['address_line1'] ?? ''}, ${_selectedAddress!['city'] ?? ''}, ${_selectedAddress!['country'] ?? ''}\nPhone: ${_selectedAddress!['phone'] ?? ''}'
+                        : 'No address selected'),
+                    trailing: TextButton(
+                      onPressed: _showAddressSelector,
+                      child: Text(_selectedAddress == null || _selectedAddress!.isEmpty ? 'Add Address' : 'Change'),
+                    ),
                   ),
-                ),
-                if (_addresses.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('No address found. Please add an address.', style: TextStyle(color: Colors.red)),
-                  ),
-                const SizedBox(height: 24),
-                Text(
-                  'Select Payment Method',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildPaymentMethods(),
-                const SizedBox(height: 24),
-                if (selectedPaymentMethod != null) ...[
+                  if (_addresses.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text('No address found. Please add an address.', style: TextStyle(color: Colors.red)),
+                    ),
+                  const SizedBox(height: 24),
                   Text(
-                    'Enter Payment Details',
+                    'Select Payment Method',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 20,
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Form(
-                    key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    child: _buildPaymentForm(),
-                  ),
+                  const SizedBox(height: 24),
+                  _buildPaymentMethods(),
+                  const SizedBox(height: 24),
+                  if (selectedPaymentMethod != null) ...[
+                    Text(
+                      'Enter Payment Details',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Form(
+                      key: _formKey,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      child: _buildPaymentForm(),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  _buildOrderSummary(),
+                  const SizedBox(height: 16), // Add extra padding at bottom
                 ],
-                const SizedBox(height: 24),
-                _buildOrderSummary(),
-              ],
+              ),
             ),
     );
   }
@@ -499,13 +524,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16), // Reduced from 24 to 16
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(vertical: 18),
+              padding: const EdgeInsets.symmetric(vertical: 16), // Reduced from 18 to 16
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -730,14 +755,26 @@ class AddressSelectorSheet extends StatelessWidget {
                 onChanged: (val) => Navigator.pop(context, val),
               )),
           ListTile(
+            leading: Icon(Icons.book),
+            title: Text('Select from Address Book'),
+            onTap: () {
+              Navigator.pop(context, {'select_from_book': true});
+            },
+          ),
+          ListTile(
             leading: Icon(Icons.add),
             title: Text('Add New Address'),
             onTap: () async {
               Navigator.pop(context);
-              await Navigator.push(
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => AddressBookScreen()),
               );
+              // If we returned from adding an address, refresh and select the new address
+              if (result == true) {
+                // Return a special value to indicate we need to refresh addresses
+                Navigator.pop(context, {'refresh': true});
+              }
             },
           ),
         ],

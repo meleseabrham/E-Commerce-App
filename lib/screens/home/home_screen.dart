@@ -49,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isSearching = false;
   int _unreadCount = 0;
   RealtimeChannel? _notificationChannel;
+  bool _hasShownLoginMessage = false;
 
   @override
   void initState() {
@@ -80,7 +81,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map && args['showLoginSuccess'] == true) {
+    if (args is Map && args['showLoginSuccess'] == true && !_hasShownLoginMessage) {
+      _hasShownLoginMessage = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

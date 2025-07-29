@@ -44,7 +44,47 @@ class AdminDrawer extends StatelessWidget {
                 ),
               ),
               _buildMenuItem(context, '/dashboard', Icons.dashboard, 'Dashboard'),
-              _buildMenuItem(context, '/products', Icons.shopping_bag, 'Products'),
+              Theme(
+                data: Theme.of(context).copyWith(
+                  dividerColor: Colors.transparent,
+                  splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                  highlightColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                ),
+                child: ExpansionTile(
+                  initiallyExpanded: selected.startsWith('/products'),
+                  leading: Icon(Icons.shopping_bag, color: selected.startsWith('/products') ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                  title: Text(
+                    'Products',
+                    style: TextStyle(
+                      color: selected.startsWith('/products') ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface,
+                      fontWeight: selected.startsWith('/products') ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                  trailing: Icon(
+                    selected.startsWith('/products') ? Icons.expand_less : Icons.expand_more,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  children: [
+                    _modernDrawerSubItem(
+                      context,
+                      selected == '/products/available',
+                      Icons.check_box,
+                      'Available',
+                      '/products/available',
+                      Colors.green,
+                    ),
+                    _modernDrawerSubItem(
+                      context,
+                      selected == '/products/sold',
+                      Icons.sell,
+                      'Sold',
+                      '/products/sold',
+                      Colors.red,
+                    ),
+                  ],
+                ),
+              ),
               _buildMenuItem(context, '/categories', Icons.category, 'Categories'),
               _buildMenuItem(context, '/users', Icons.people, 'Users'),
             
