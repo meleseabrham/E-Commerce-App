@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/admin_drawer.dart';
 import 'dart:convert';
@@ -50,9 +51,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     if (user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacementNamed(context, '/home');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Access denied: Please log in.')),
-        );
+        AppNotify.error(context, 'Access denied: Please log in.');
       });
       return;
     }
@@ -60,14 +59,12 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         .from('users')
         .select('is_admin')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
     // Only restrict if this is an admin-only page
     if (data == null || data['is_admin'] != true) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacementNamed(context, '/home');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Access denied: Admins only')),
-        );
+        AppNotify.error(context, 'Access denied: Admins only');
       });
       return;
     }
@@ -95,9 +92,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
           schema: 'public',
           table: 'orders',
           callback: (payload) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('New order placed!')),
-            );
+            AppNotify.error(context, 'New order placed!');
             _fetchOrders();
           },
         )
@@ -106,9 +101,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
           schema: 'public',
           table: 'orders',
           callback: (payload) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Order updated!')),
-            );
+            AppNotify.error(context, 'Order updated!');
             _fetchOrders();
           },
         )
@@ -200,9 +193,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     final bytes = utf8.encode(csv);
     final filename = 'orders_export_${DateTime.now().toIso8601String().replaceAll(':', '-')}.csv';
     if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Web download not supported in this build. Use mobile/desktop app.')),
-      );
+      AppNotify.error(context, 'Web download not supported in this build. Use mobile/desktop app.');
     } else {
       _saveAndOpenFile(bytes: bytes, suggestedName: filename);
     }
@@ -210,9 +201,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
 
   void _exportToPDF() async {
     if (_filteredOrders.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No orders to export.')),
-      );
+      AppNotify.error(context, 'No orders to export.');
       return;
     }
 
@@ -267,9 +256,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       // Save PDF
       if (kIsWeb) {
         final bytes = await pdf.save();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Web download not supported in this build. ${bytes.length} bytes generated.')),
-        );
+        AppNotify.error(context, 'Web download not supported in this build. ${bytes.length} bytes generated.');
       } else {
         // Mobile implementation
         final status = await Permission.storage.request();
@@ -279,15 +266,11 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
           await file.writeAsBytes(await pdf.save());
           await OpenFilex.open(file.path);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Storage permission denied.')),
-          );
+          AppNotify.error(context, 'Storage permission denied.');
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating PDF: $e')),
-      );
+      AppNotify.error(context, 'Error generating PDF: $e');
     }
   }
 
@@ -349,9 +332,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     final bytes = utf8.encode(csv);
     final filename = 'orders_selected_${DateTime.now().toIso8601String().replaceAll(':', '-')}.csv';
     if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Web download not supported in this build. Use mobile/desktop app.')),
-      );
+      AppNotify.error(context, 'Web download not supported in this build. Use mobile/desktop app.');
     } else {
       _saveAndOpenFile(bytes: bytes, suggestedName: filename);
     }
@@ -360,9 +341,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   void _exportSelectedToPDF() async {
     final selectedOrders = _filteredOrders.where((o) => _selectedOrderIds.contains(o['id'].toString())).toList();
     if (selectedOrders.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No orders selected for export.')),
-      );
+      AppNotify.error(context, 'No orders selected for export.');
       return;
     }
 
@@ -418,9 +397,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       // Save PDF
       if (kIsWeb) {
         final bytes = await pdf.save();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Web download not supported in this build. ${bytes.length} bytes generated.')),
-        );
+        AppNotify.error(context, 'Web download not supported in this build. ${bytes.length} bytes generated.');
       } else {
         // Mobile implementation
         final status = await Permission.storage.request();
@@ -430,15 +407,11 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
           await file.writeAsBytes(await pdf.save());
           await OpenFilex.open(file.path);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Storage permission denied.')),
-          );
+          AppNotify.error(context, 'Storage permission denied.');
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating PDF: $e')),
-      );
+      AppNotify.error(context, 'Error generating PDF: $e');
     }
   }
 
@@ -446,7 +419,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     try {
       final status = await Permission.storage.request();
       if (!status.isGranted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Storage permission denied.')));
+        AppNotify.error(context, 'Storage permission denied.');
         return;
       }
       final dir = await getApplicationDocumentsDirectory();
@@ -454,7 +427,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       await file.writeAsBytes(bytes, flush: true);
       await OpenFilex.open(file.path);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save file: $e')));
+      AppNotify.error(context, 'Failed to save file: $e');
     }
   }
 
@@ -532,7 +505,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       }
       _fetchOrders();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      AppNotify.error(context, 'Error: $e');
     }
   }
 
@@ -559,7 +532,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       }
       _fetchOrders();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      AppNotify.error(context, 'Error: $e');
     }
   }
 

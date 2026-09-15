@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:provider/provider.dart';
 import '../../models/product.dart';
 import '../../widgets/product_card.dart';
@@ -125,13 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (args is Map && args['showLoginSuccess'] == true && !_hasShownLoginMessage) {
       _hasShownLoginMessage = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login successful! Welcome to MeHal Gebeya'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        AppNotify.success(context, 'Login successful! Welcome to MeHal Gebeya');
       });
     }
   }
@@ -251,9 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
           .toList();
       setState(() => _filteredProducts = products);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ErrorHandler.getErrorMessage(e))),
-      );
+      AppNotify.error(context, ErrorHandler.getErrorMessage(e));
     }
 
   }
@@ -318,7 +311,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -390,7 +382,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -430,7 +421,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -543,7 +533,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                     padding: const EdgeInsets.all(20.0),
                                     child: Text(
                                       ErrorHandler.getErrorMessage(snapshot.error!),
-                                      textAlign: TextAlign.center,
                                       style: const TextStyle(color: Colors.red),
                                     ),
                                   ),
@@ -575,9 +564,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         onFavoriteToggle: (isFav) async {
                                           final user = Supabase.instance.client.auth.currentUser;
                                           if (user == null) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Login to save your wishlist!')),
-                                            );
+                                            AppNotify.error(context, 'Login to save your wishlist!');
                                           } else {
                                             setState(() => products[index].isFavorite = isFav);
                                             _fetchWishlistCount();
@@ -614,7 +601,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   })(),
                   builder: (context, snapshot) {
                     if (snapshot.hasData && snapshot.data == true) {
-                      return Center(child: Text('No internet connection.', textAlign: TextAlign.center));
+                      return Center(child: Text('No internet connection.'));
                     }
                     return SizedBox.shrink();
                   },
@@ -761,14 +748,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('No products found in ${category['name']}.')),
-                          );
+                          AppNotify.error(context, 'No products found in ${category['name']}.');
                         }
                       } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('No internet connection.', textAlign: TextAlign.center)),
-                        );
+                        AppNotify.error(context, 'No internet connection.');
                       }
                     },
                   );
@@ -940,14 +923,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('No products found in ${category['name']}.')),
-                  );
+                  AppNotify.error(context, 'No products found in ${category['name']}.');
                 }
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('No internet connection.', textAlign: TextAlign.center)),
-                );
+                AppNotify.error(context, 'No internet connection.');
               }
             },
             child: Container(
@@ -976,7 +955,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? AppColors.darkTextPrimary
                             : Colors.black87,
                       ),
-                      textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
@@ -1026,14 +1004,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('No products found in ${category['name']}.')),
-                          );
+                          AppNotify.error(context, 'No products found in ${category['name']}.');
                         }
                       } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('No internet connection.', textAlign: TextAlign.center)),
-                        );
+                        AppNotify.error(context, 'No internet connection.');
                       }
                     },
                   );

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import '../../theme/app_colors.dart';
@@ -563,31 +564,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _processPayment() async {
     if (selectedPaymentMethod == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a payment method'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      AppNotify.error(context, 'Please select a payment method');
       return;
     }
     if (_selectedAddress == null || _selectedAddress!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select an address'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      AppNotify.error(context, 'Please select an address');
       return;
     }
     // Validate payment input
     if (!(_formKey.currentState?.validate() ?? false) || _accountController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter valid payment details'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      AppNotify.error(context, 'Please enter valid payment details');
       return;
     }
     // Check stock for each cart item before processing
@@ -600,22 +586,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
             .maybeSingle();
         final currentStock = (prod?['stock'] ?? 0) as int;
         if (currentStock < item.quantity) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Insufficient stock for ${prod?['name'] ?? 'item'} (available: $currentStock, requested: ${item.quantity})'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          AppNotify.error(context, 'Insufficient stock for ${prod?['name'] ?? 'item'} (available: $currentStock, requested: ${item.quantity})');
           return;
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Unable to verify stock: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      AppNotify.error(context, 'Unable to verify stock: $e');
       return;
     }
 
@@ -698,12 +674,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Payment failed: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        AppNotify.error(context, 'Payment failed: ${e.toString()}');
       }
     } finally {
       if (mounted) {

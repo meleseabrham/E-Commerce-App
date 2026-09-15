@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/admin_drawer.dart';
 import '../../utils/error_handler.dart';
@@ -24,13 +25,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map && args['showLoginSuccess'] == true && !_hasShownLoginMessage) {
         _hasShownLoginMessage = true;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login successful! Welcome to MeHal Gebeya'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        AppNotify.success(context, 'Login successful! Welcome to MeHal Gebeya');
       }
     });
     _fetchAdminNotifications();
@@ -98,7 +93,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         .from('orders')
         .select('*, users(email), shipping_address')
         .eq('id', orderId)
-        .single();
+        .maybeSingle();
+    if (order == null) {
+      AppNotify.error(context, 'Order not found.');
+      return;
+    }
     final items = order['items'] is String ? [] : (order['items'] as List<dynamic>?);
     final userEmail = order['users']?['email'] ?? '';
     final shipping = order['shipping_address'] ?? {};
@@ -233,7 +232,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
       _fetchAdminNotifications();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      AppNotify.error(context, 'Error: $e');
     }
   }
 
@@ -268,7 +267,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -342,7 +340,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 padding: const EdgeInsets.all(24.0),
                 child: Text(
                   ErrorHandler.getErrorMessage(snapshot.error!),
-                  textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.red, fontSize: 16),
                 ),
               ),
@@ -491,7 +488,7 @@ _buildStatCard(context, 'Users', userCount, Icons.people, '/users', Colors.blue)
           .from('users')
           .select('full_name, email')
           .eq('id', user!.id)
-          .single(),
+          .maybeSingle(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Padding(

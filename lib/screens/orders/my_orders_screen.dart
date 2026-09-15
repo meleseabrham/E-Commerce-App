@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/order.dart';
@@ -62,7 +63,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         .from('users')
         .select('is_admin')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
     List notifications;
     if (userProfile != null && userProfile['is_admin'] == true) {
       // Admin: fetch all notifications (or filter by admin_id if you want)
@@ -92,7 +93,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         .from('users')
         .select('is_admin')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
     if (userProfile != null && userProfile['is_admin'] == true) {
       // Admin: subscribe to all notifications
       _notificationChannel = Supabase.instance.client
@@ -283,7 +284,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -317,7 +317,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -608,15 +607,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         _ordersFuture = _fetchOrders();
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(' Your Order Accepted.'),),
-        );
+        AppNotify.error(context, ' Your Order Accepted.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update: $e')),
-        );
+        AppNotify.error(context, 'Failed to update: $e');
       }
     }
   }
@@ -635,15 +630,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         _ordersFuture = _fetchOrders();
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(' Your Order Cancelled.'),),
-        );
+        AppNotify.error(context, ' Your Order Cancelled.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to cancel: $e')),
-        );
+        AppNotify.error(context, 'Failed to cancel: $e');
       }
     }
   }

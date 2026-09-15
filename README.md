@@ -261,6 +261,8 @@ If the build fails unexpectedly after environment changes:
 1.  **Clean the project**: `flutter clean`
 2.  **Fetch dependencies**: `flutter pub get`
 3.  **Run again**: `flutter run`
+4.  **Run on web**: flutter run -d chrome --web-port=3000
+
 *Note: If errors persist, try closing any programs that might be locking files (like Antivirus or indexing tools).*
 
 ---

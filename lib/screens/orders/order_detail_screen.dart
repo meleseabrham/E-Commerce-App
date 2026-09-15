@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -93,24 +94,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       final phone = (admin?['phone'] ?? '').toString().trim();
       if (phone.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No admin phone number available')),
-          );
+          AppNotify.error(context, 'No admin phone number available');
         }
         return;
       }
       final uri = Uri(scheme: 'tel', path: phone);
       final ok = await launchUrl(uri);
       if (!ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not start a call to $phone')),
-        );
+        AppNotify.error(context, 'Could not start a call to $phone');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start call: $e')),
-        );
+        AppNotify.error(context, 'Failed to start call: $e');
       }
     }
   }
@@ -391,40 +386,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         //   ..click();
         // html.Url.revokeObjectUrl(url);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Receipt downloaded successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          AppNotify.success(context, 'Receipt downloaded successfully');
         }
         return;
       }
       final receiptPath = await ReceiptService.generateReceipt(widget.order);
       final result = await OpenFilex.open(receiptPath);
       if (result.type != ResultType.done && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Receipt saved, but could not open:  {result.message}'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        AppNotify.error(context, 'Receipt saved, but could not open:  {result.message}');
       } else if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Receipt downloaded and opened successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppNotify.success(context, 'Receipt downloaded and opened successfully');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to download receipt: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppNotify.error(context, 'Failed to download receipt: $e');
       }
     }
   }

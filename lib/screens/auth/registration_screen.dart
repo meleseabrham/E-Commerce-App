@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import '../../widgets/custom_text_field.dart';
@@ -294,28 +295,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       } else if (response.user == null && response.session == null) {
         // Email confirmation required
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Registration successful! Please check your email to confirm your account.'),
-              backgroundColor: AppColors.primary,
-            ),
-          );
+          AppNotify.success(context, 'Registration successful! Please check your email to confirm your account.');
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration failed.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        AppNotify.error(context, 'Registration failed.');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ErrorHandler.getErrorMessage(e)),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) AppNotify.error(context, ErrorHandler.getErrorMessage(e));
     } finally {
 
       if (mounted) setState(() => _isLoading = false);

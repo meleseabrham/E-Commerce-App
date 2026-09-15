@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/admin_drawer.dart';
 import 'admin_dashboard_screen.dart';
@@ -38,7 +39,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       await Supabase.instance.client.from('users').update({'is_active': !isActive}).eq('id', id);
       _fetchUsers();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      AppNotify.error(context, 'Error: $e');
     }
   }
 
@@ -47,7 +48,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       await Supabase.instance.client.from('users').update({'is_admin': !isAdmin}).eq('id', id);
       _fetchUsers();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      AppNotify.error(context, 'Error: $e');
     }
   }
 
@@ -130,13 +131,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                   if (confirmed == true) {
                                     try {
                                       await Supabase.instance.client.auth.resetPasswordForEmail(email);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Password reset email sent!')),
-                                      );
+                                      AppNotify.error(context, 'Password reset email sent!');
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Failed to send reset email: $e')),
-                                      );
+                                      AppNotify.error(context, 'Failed to send reset email: $e');
                                     }
                                   }
                                 }

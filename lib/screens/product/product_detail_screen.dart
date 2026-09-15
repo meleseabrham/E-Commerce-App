@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import '../../theme/app_colors.dart';
 import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
@@ -79,9 +80,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _submitReview() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login to leave a review!')),
-      );
+      AppNotify.error(context, 'Login to leave a review!');
       return;
     }
     final existing = await Supabase.instance.client
@@ -391,26 +390,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     cartProvider.addItem(widget.product);
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.product.name} added to cart'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        action: SnackBarAction(
-          label: 'View Cart',
-          textColor: Colors.white,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => CartScreen()),
-            );
-          },
-        ),
-      ),
-    );
+    AppNotify.success(context, '${widget.product.name} added to cart');
   }
 
   void _buyNow(BuildContext context) {

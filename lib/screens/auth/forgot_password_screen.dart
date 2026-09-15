@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/social_footer.dart';
 import '../../theme/app_colors.dart';
@@ -33,13 +34,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         await Supabase.instance.client.auth.resetPasswordForEmail(_emailController.text.trim());
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password reset link has been sent to your email. Please check your inbox.'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
-          );
+          AppNotify.success(context, 'Password reset link has been sent to your email. Please check your inbox.');
 
           // Wait for 2 seconds to show the success message before popping
           Future.delayed(const Duration(seconds: 2), () {
@@ -57,13 +52,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         } else if (e.toString().contains('network-request-failed')) {
           errorMsg = 'Network error. Please check your internet connection.';
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        if (mounted) AppNotify.error(context, errorMsg);
       } finally {
         if (mounted) {
           setState(() {
@@ -167,7 +156,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         children: [
           const Text(
             'Enter your email address and we\'ll send you a secure link to reset your password.',
-            textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
           ),
           const SizedBox(height: 24),

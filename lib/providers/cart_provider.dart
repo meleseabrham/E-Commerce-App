@@ -27,7 +27,7 @@ class CartProvider with ChangeNotifier {
           .from('carts')
           .select()
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
       if (response != null && response['items'] != null) {
         _items.clear();
         final items = response['items'] as List<dynamic>;

@@ -151,3 +151,50 @@ CREATE TABLE IF NOT EXISTS public.carts (
   updated_at timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now()
 );
+
+-- ============================================================
+-- TRIGGER: Auto-insert into public.users on new auth signup
+-- (Handles both email/password and OAuth / Google Sign-In)
+-- Run this once in Supabase SQL Editor
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name, avatar_url, created_at, is_admin)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture', ''),
+    NOW(),
+    FALSE
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Drop existing trigger if present and recreate
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================
+-- BACKFILL: Insert existing auth.users who are missing from
+-- public.users (e.g., users who signed in with Google before
+-- the trigger was created)
+-- Run this ONCE after creating the trigger above
+-- ============================================================
+
+INSERT INTO public.users (id, email, full_name, avatar_url, created_at, is_admin)
+SELECT
+  id,
+  email,
+  COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', ''),
+  COALESCE(raw_user_meta_data->>'avatar_url', raw_user_meta_data->>'picture', ''),
+  created_at,
+  FALSE
+FROM auth.users
+WHERE id NOT IN (SELECT id FROM public.users);

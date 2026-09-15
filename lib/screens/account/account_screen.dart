@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -62,34 +63,46 @@ class _AccountScreenState extends State<AccountScreen> {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) return;
-      final data = await Supabase.instance.client
+      var data = await Supabase.instance.client
           .from('users')
           .select()
           .eq('id', user.id)
-          .single();
-      setState(() {
-        _userProfile = data;
-        _isLoading = false;
-        _nameController.text = data['full_name'] ?? '';
-        _phoneController.text = data['phone'] ?? '';
-      });
+          .maybeSingle();
+
+      if (data == null) {
+        // Create initial profile for Google / OAuth users
+        final metadata = user.userMetadata ?? {};
+        final newProfile = {
+          'id': user.id,
+          'email': user.email ?? '',
+          'full_name': metadata['full_name'] ?? metadata['name'] ?? '',
+          'avatar_url': metadata['avatar_url'] ?? metadata['picture'] ?? '',
+          'created_at': DateTime.now().toIso8601String(),
+          'is_admin': false,
+        };
+        try {
+          await Supabase.instance.client.from('users').upsert(newProfile);
+          data = newProfile;
+        } catch (_) {
+          data = newProfile;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _userProfile = data;
+          _isLoading = false;
+          _nameController.text = data?['full_name'] ?? '';
+          _phoneController.text = data?['phone'] ?? '';
+        });
+      }
     } catch (e) {
       final errorStr = e.toString();
       if (mounted) {
         if (errorStr.contains('SocketException') || errorStr.contains('Failed host lookup') || errorStr.contains('No address associated')) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('No internet connection. Please check your connection and try again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppNotify.error(context, 'No internet connection. Please check your connection and try again.');
         } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to load profile. Please try again later.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppNotify.error(context, 'Failed to load profile. Please try again later.');
         }
       }
     }
@@ -124,15 +137,11 @@ class _AccountScreenState extends State<AccountScreen> {
         _userProfile = {...?_userProfile, 'avatar_url': publicUrl};
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Avatar updated'), backgroundColor: Colors.green),
-        );
+        AppNotify.success(context, 'Avatar updated');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update avatar: $e'), backgroundColor: Colors.red),
-        );
+        AppNotify.error(context, 'Failed to update avatar: $e');
       }
     }
   }
@@ -160,30 +169,11 @@ class _AccountScreenState extends State<AccountScreen> {
         'phone': _phoneController.text.trim(),
       }).eq('id', user.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                const Text('Profile updated successfully!'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        AppNotify.success(context, 'Profile updated successfully!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update profile: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppNotify.error(context, 'Failed to update profile: $e');
       }
     }
   }
@@ -488,14 +478,14 @@ class _AccountScreenState extends State<AccountScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load support: $e')));
+      AppNotify.error(context, 'Failed to load support: $e');
     }
   }
 
   Future<void> _launchPhone(String phone) async {
     final uri = Uri(scheme: 'tel', path: phone);
     if (!await launchUrl(uri)) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not start call.')));
+      AppNotify.error(context, 'Could not start call.');
     }
   }
 
@@ -656,9 +646,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     final cart = Provider.of<CartProvider>(context, listen: false);
     cart.addItem(product);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${product.name} added to cart!')),
-      );
+      AppNotify.error(context, '${product.name} added to cart!');
     }
     await _removeFromWishlist(product);
   }

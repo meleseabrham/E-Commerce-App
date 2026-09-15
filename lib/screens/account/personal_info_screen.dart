@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
@@ -25,25 +26,41 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) return;
-      final data = await Supabase.instance.client
+      var data = await Supabase.instance.client
           .from('users')
           .select()
           .eq('id', user.id)
-          .single();
-      setState(() {
-        _userProfile = data;
-        _isLoading = false;
-        _nameController.text = data['full_name'] ?? '';
-        _phoneController.text = data['phone'] ?? '';
-      });
+          .maybeSingle();
+
+      if (data == null) {
+        final metadata = user.userMetadata ?? {};
+        final newProfile = {
+          'id': user.id,
+          'email': user.email ?? '',
+          'full_name': metadata['full_name'] ?? metadata['name'] ?? '',
+          'avatar_url': metadata['avatar_url'] ?? metadata['picture'] ?? '',
+          'created_at': DateTime.now().toIso8601String(),
+          'is_admin': false,
+        };
+        try {
+          await Supabase.instance.client.from('users').upsert(newProfile);
+          data = newProfile;
+        } catch (_) {
+          data = newProfile;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _userProfile = data;
+          _isLoading = false;
+          _nameController.text = data?['full_name'] ?? '';
+          _phoneController.text = data?['phone'] ?? '';
+        });
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load profile: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppNotify.error(context, 'Failed to load profile: $e');
       }
     }
   }
@@ -61,33 +78,13 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       }).eq('id', user.id);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                const Text('Profile updated successfully!'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        AppNotify.success(context, 'Profile updated successfully!');
         // Reload profile to refresh the UI
         _loadUserProfile();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update profile: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppNotify.error(context, 'Failed to update profile: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

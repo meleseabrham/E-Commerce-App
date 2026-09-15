@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
 import 'package:provider/provider.dart';
@@ -107,9 +108,7 @@ class WishlistView extends StatelessWidget {
                                   onPressed: () {
                                     final cart = Provider.of<CartProvider>(context, listen: false);
                                     cart.addItem(product);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Added to cart')),
-                                    );
+                                    AppNotify.error(context, 'Added to cart');
                                   },
                                 ),
                               ],

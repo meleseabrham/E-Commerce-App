@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import '../../theme/app_colors.dart';
 import '../../models/cart_item.dart';
 import '../../providers/cart_provider.dart';
@@ -31,12 +32,7 @@ class _CartScreenState extends State<CartScreen> {
         await Provider.of<CartProvider>(context, listen: false).loadUserCart();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error loading cart: $e'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          AppNotify.error(context, 'Error loading cart: $e');
         }
       }
     }
@@ -222,7 +218,6 @@ onPressed: () {
                         child: Text(
                           'Some items exceed available stock. Please adjust quantities.',
                           style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
-                          textAlign: TextAlign.center,
                         ),
                       ),
                     SizedBox(

@@ -1,8 +1,10 @@
+﻿
 
 
 
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
@@ -69,11 +71,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Redirect to payment if needed
       final userId = response.user!.id;
-      final userProfile = await Supabase.instance.client
+      var userProfile = await Supabase.instance.client
           .from('users')
           .select()
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+      if (userProfile == null) {
+        final metadata = response.user!.userMetadata ?? {};
+        final newProfile = {
+          'id': userId,
+          'email': response.user!.email ?? '',
+          'full_name': metadata['full_name'] ?? metadata['name'] ?? '',
+          'avatar_url': metadata['avatar_url'] ?? metadata['picture'] ?? '',
+          'created_at': DateTime.now().toIso8601String(),
+          'is_admin': false,
+        };
+        try {
+          await Supabase.instance.client.from('users').upsert(newProfile);
+          userProfile = newProfile;
+        } catch (_) {
+          userProfile = newProfile;
+        }
+      }
 
       if (userProfile != null && userProfile['is_admin'] == true) {
         Navigator.pushReplacementNamed(
@@ -89,46 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppNotify.error(context, 'Login failed.');
     }
   } catch (e) {
-    final messenger = ScaffoldMessenger.of(context);
     final errorStr = e.toString();
-    messenger.clearSnackBars();
-
     if (errorStr.contains('SocketException') ||
         errorStr.contains('Failed host lookup') ||
         errorStr.contains('No address associated')) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('No internet connection.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } else if (errorStr.contains('invalid_credentials') || 
+      if (mounted) AppNotify.error(context, 'No internet connection.');
+    } else if (errorStr.contains('invalid_credentials') ||
                errorStr.contains('Invalid login credentials') ||
                errorStr.contains('invalid-credential')) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Incorrect email and password. Please check and try again.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) AppNotify.error(context, 'Incorrect email and password. Please check and try again.');
     } else {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Login failed. Please try again later.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) AppNotify.error(context, 'Login failed. Please try again later.');
     }
   } finally {
     if (mounted) setState(() => _isLoading = false);
@@ -373,10 +367,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildGoogleButton() {
     return OutlinedButton.icon(
-      icon: Image.network(
-        'https://lpndjssicpcnssmngqln.supabase.co/storage/v1/object/sign/mehalgebeya/assets/logo/google.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yMjMyMzlhYy1jM2IwLTQ5ZDEtYmQzYS0wYzg4NWMwNDkxZmYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWhhbGdlYmV5YS9hc3NldHMvbG9nby9nb29nbGUucG5nIiwiaWF0IjoxNzUyNzYwMDU1LCJleHAiOjE3ODQyOTYwNTV9.5_zHriiLO0wjWJlraRuFwab1phtyNWBZACTI-UEgxL0',
-        height: 20,
-        errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata, size: 24),
+      icon: Image.asset(
+        'assets/logo/google.png',
+        height: 22,
+        width: 22,
       ),
       label: const Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
       style: OutlinedButton.styleFrom(
@@ -389,11 +383,10 @@ class _LoginScreenState extends State<LoginScreen> {
         try {
           await Supabase.instance.client.auth.signInWithOAuth(
             OAuthProvider.google,
+            redirectTo: kIsWeb ? null : 'io.supabase.flutterquickstart://login-callback',
           );
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Google sign-in failed: $e')),
-          );
+          AppNotify.error(context, 'Google sign-in failed: $e');
         }
       },
     );

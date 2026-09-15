@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/admin_drawer.dart';
 import 'admin_dashboard_screen.dart';
@@ -60,7 +61,7 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
                 final name = nameController.text.trim();
                 final icon = iconController.text.trim();
                 if (name.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Name is required.')));
+                  AppNotify.error(context, 'Name is required.');
                   return;
                 }
                 if (isEdit) {
@@ -69,18 +70,18 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
                       .update({'name': name, 'icon': icon.isEmpty ? null : icon})
                       .eq('id', category!['id'])
                       .select()
-                      .single();
+                      .maybeSingle();
                 } else {
                   await Supabase.instance.client
                       .from('categories')
                       .insert({'name': name, 'icon': icon.isEmpty ? null : icon})
                       .select()
-                      .single();
+                      .maybeSingle();
                 }
                 Navigator.pop(context);
                 _fetchCategories();
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ErrorHandler.getErrorMessage(e))));
+                AppNotify.error(context, ErrorHandler.getErrorMessage(e));
               }
 
             },
@@ -113,7 +114,7 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
             .maybeSingle();
         _fetchCategories();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ErrorHandler.getErrorMessage(e))));
+        AppNotify.error(context, ErrorHandler.getErrorMessage(e));
       }
     }
 

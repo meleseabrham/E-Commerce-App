@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
@@ -274,9 +275,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                           }
                           setState(() {});
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error picking images: $e')),
-                          );
+                          AppNotify.error(context, 'Error picking images: $e');
                         }
                       },
                       child: Text(kIsWeb ? 'Choose Images (max 4)' : 'Pick Images (max 4)'),
@@ -302,9 +301,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                               }
                             }
                           } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error picking image: $e')),
-                            );
+                            AppNotify.error(context, 'Error picking image: $e');
                           }
                         },
                         icon: const Icon(Icons.add_photo_alternate),
@@ -710,7 +707,6 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                             : Colors.black87,
                           fontSize: 16,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -753,7 +749,6 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                       : Colors.grey[500],
                                     fontSize: 14,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),

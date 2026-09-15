@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/admin_drawer.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -45,7 +46,7 @@ class _AdminAnalysisScreenState extends State<AdminAnalysisScreen> {
       _userCount = (users as List).length;
       _totalSales = orders.fold(0.0, (sum, o) => sum + (o['total'] ?? 0.0));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      AppNotify.error(context, 'Error: $e');
     }
     setState(() => _isLoading = false);
   }

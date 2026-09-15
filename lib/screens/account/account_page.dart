@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:shared_preferences.dart';
 import 'package:ethioshop/screens/auth/auth_screens.dart';
 
@@ -189,12 +190,7 @@ class _AccountPageState extends State<AccountPage> {
             onPressed: () {
               if (formKey.currentState!.validate()) {
                 // TODO: Implement actual password change logic
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Password changed successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                AppNotify.success(context, 'Password changed successfully');
                 Navigator.pop(context);
               }
             },

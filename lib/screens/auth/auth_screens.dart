@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mehal_gebeya/theme/app_colors.dart'; // Added import for AppColors
 
@@ -86,7 +87,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
-                  textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 20),
                 // Form
@@ -306,12 +306,7 @@ class _AuthScreenState extends State<AuthScreen> {
           ElevatedButton(
             onPressed: () {
               // TODO: Implement actual password reset logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Password reset link sent to your email'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              AppNotify.success(context, 'Password reset link sent to your email');
               Navigator.pop(context);
             },
             child: Text('Reset Password'),
