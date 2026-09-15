@@ -1,4 +1,4 @@
-﻿
+
 
 
 
@@ -117,12 +117,25 @@ class _LoginScreenState extends State<LoginScreen> {
         errorStr.contains('Failed host lookup') ||
         errorStr.contains('No address associated')) {
       if (mounted) AppNotify.error(context, 'No internet connection.');
+    } else if (errorStr.toLowerCase().contains('email not confirmed') ||
+               errorStr.toLowerCase().contains('email_not_confirmed')) {
+      if (mounted) {
+        AppNotify.error(
+          context,
+          'Email not confirmed. Please disable "Confirm email" in Supabase Dashboard to login without confirmation.',
+        );
+      }
     } else if (errorStr.contains('invalid_credentials') ||
                errorStr.contains('Invalid login credentials') ||
                errorStr.contains('invalid-credential')) {
-      if (mounted) AppNotify.error(context, 'Incorrect email and password. Please check and try again.');
+      if (mounted) {
+        AppNotify.error(
+          context,
+          'Incorrect email or password. Please check and try again.',
+        );
+      }
     } else {
-      if (mounted) AppNotify.error(context, 'Login failed. Please try again later.');
+      if (mounted) AppNotify.error(context, 'Login failed. Please check your credentials or try again.');
     }
   } finally {
     if (mounted) setState(() => _isLoading = false);

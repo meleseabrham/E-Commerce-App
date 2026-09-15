@@ -198,3 +198,41 @@ SELECT
   FALSE
 FROM auth.users
 WHERE id NOT IN (SELECT id FROM public.users);
+
+-- ============================================================
+-- AUTO-CONFIRM: Skip email confirmation link requirement
+-- (Automatically marks email as confirmed on signup)
+-- Run this once in Supabase SQL Editor
+-- ============================================================
+
+-- 1. Instantly confirm all existing unconfirmed accounts so they can log in
+UPDATE auth.users
+SET email_confirmed_at = NOW()
+WHERE email_confirmed_at IS NULL;
+
+-- 2. Trigger to auto-confirm all future email signups immediately
+CREATE OR REPLACE FUNCTION public.auto_confirm_user()
+RETURNS trigger AS $$
+BEGIN
+  NEW.email_confirmed_at = COALESCE(NEW.email_confirmed_at, NOW());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_auto_confirm ON auth.users;
+CREATE TRIGGER on_auth_user_auto_confirm
+  BEFORE INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.auto_confirm_user();
+
+-- ============================================================
+-- HELPER: Check if email already exists before registration
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.check_email_exists(lookup_email text)
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM auth.users WHERE LOWER(email) = LOWER(TRIM(lookup_email))
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+

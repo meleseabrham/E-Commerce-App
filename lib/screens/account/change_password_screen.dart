@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mehal_gebeya/utils/app_notify.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -30,21 +31,25 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
     
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isLoading = true);
 
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null || user.email == null) throw 'User session lost. Please login again.';
 
-      // 1. Verify Current Password by attempting to sign in
-      try {
-        await Supabase.instance.client.auth.signInWithPassword(
-          email: user.email!,
-          password: _currentPasswordController.text,
-        );
-      } catch (e) {
-        throw 'Incorrect current password. Please check and try again.';
+      final providers = (user.appMetadata['providers'] as List<dynamic>?) ?? [];
+      final isGoogleOnly = providers.contains('google') && !providers.contains('email');
+
+      // 1. Verify Current Password only if user registered with email/password
+      if (!isGoogleOnly && _currentPasswordController.text.isNotEmpty) {
+        try {
+          await Supabase.instance.client.auth.signInWithPassword(
+            email: user.email!,
+            password: _currentPasswordController.text,
+          );
+        } catch (e) {
+          throw 'Incorrect current password. Please check and try again.';
+        }
       }
 
       // 2. Update to New Password
@@ -54,25 +59,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       );
 
       if (response.user != null) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                const Text('Password updated! Please login again.'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        if (mounted) {
+          AppNotify.success(context, 'Password updated successfully! Please login with your new password.');
+        }
         
         // Sign out the user and redirect to home
         await Future.delayed(const Duration(seconds: 2));
-        messenger.clearSnackBars();
         await Supabase.instance.client.auth.signOut();
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
@@ -82,13 +74,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           );
         }
       } else {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Failed to change password. Please try again.'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (mounted) {
+          AppNotify.error(context, 'Failed to change password. Please try again.');
+        }
       }
     } catch (e) {
       String errorMessage = e.toString();
@@ -109,13 +97,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       }
 
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppNotify.error(context, errorMessage);
       }
     } finally {
       if (mounted) {

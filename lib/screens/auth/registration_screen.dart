@@ -6,9 +6,11 @@ import '../../widgets/custom_text_field.dart';
 import '../../widgets/social_footer.dart';
 import '../../main.dart'; // Import for AppColors
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../theme/app_colors.dart';
 import '../home/home_screen.dart';
-import 'package:mehal_gebeya/theme/app_colors.dart';
 import '../../utils/error_handler.dart';
 
 
@@ -73,7 +75,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   _buildForm(),
                   const SizedBox(height: 24),
                   _buildRegisterButton(),
+                  const SizedBox(height: 20),
+                  _buildDivider(),
                   const SizedBox(height: 16),
+                  _buildGoogleButton(),
+                  const SizedBox(height: 20),
                   _buildFooter(context),
                 ],
               ),
@@ -198,8 +204,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) return 'Required';
-        if (isConfirm && value != _passwordController.text) return 'Not matching';
+        if (value == null || value.trim().isEmpty) return 'Required';
+        if (isPassword && !isConfirm && value.length < 6) {
+          return 'Password must be at least 6 characters';
+        }
+        if (isConfirm && value != _passwordController.text) {
+          return 'Passwords do not match';
+        }
         return null;
       },
     );
@@ -235,6 +246,43 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        const Expanded(child: Divider(thickness: 1, endIndent: 10)),
+        Text('Or continue with', style: TextStyle(color: Colors.grey[400], fontSize: 12, fontWeight: FontWeight.w600)),
+        const Expanded(child: Divider(thickness: 1, indent: 10)),
+      ],
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    return OutlinedButton.icon(
+      icon: Image.asset(
+        'assets/logo/google.png',
+        height: 22,
+        width: 22,
+      ),
+      label: const Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor: Colors.white,
+        side: BorderSide(color: Colors.grey[300]!),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      onPressed: () async {
+        try {
+          await Supabase.instance.client.auth.signInWithOAuth(
+            OAuthProvider.google,
+            redirectTo: kIsWeb ? null : 'io.supabase.flutterquickstart://login-callback',
+          );
+        } catch (e) {
+          AppNotify.error(context, 'Google sign-in failed: $e');
+        }
+      },
+    );
+  }
+
   Widget _buildFooter(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -264,46 +312,109 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
+
+      // Check 1: RPC or users table check for existing email before attempting signup
+      try {
+        final existing = await Supabase.instance.client
+            .from('users')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+        if (existing != null) {
+          if (mounted) {
+            AppNotify.error(context, 'This email is already registered. Please sign in instead.');
+          }
+          return;
+        }
+      } catch (_) {
+        // Table or RLS check skipped, proceed to signup check
+      }
+
       final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
       );
-      if (response.user != null) {
-        // Insert user metadata into 'users' table
-        await Supabase.instance.client.from('users').insert({
-          'id': response.user!.id,
-          'email': response.user!.email,
-          'created_at': DateTime.now().toIso8601String(),
-          'is_admin': false,
-        });
-        // After registration, go to login page
+
+      final user = response.user;
+      final session = response.session;
+
+      // Check 2: Supabase returns user with empty identities if the email already exists
+      if (user != null && (user.identities == null || user.identities!.isEmpty)) {
         if (mounted) {
-          Navigator.of(context).pop(); // Close registration dialog if open
-          showDialog(
-            context: context,
-            builder: (context) => Dialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: SizedBox(
-                height: 500,
-                child: LoginScreen(),
-              ),
-            ),
-          );
+          AppNotify.error(context, 'This email is already registered. Please sign in instead.');
         }
         return;
-      } else if (response.user == null && response.session == null) {
-        // Email confirmation required
-        if (mounted) {
-          AppNotify.success(context, 'Registration successful! Please check your email to confirm your account.');
+      }
+
+      if (user != null) {
+        // Upsert user into public.users (safe against trigger race conditions)
+        try {
+          await Supabase.instance.client.from('users').upsert({
+            'id': user.id,
+            'email': user.email ?? email,
+            'created_at': DateTime.now().toIso8601String(),
+            'is_admin': false,
+          });
+        } catch (_) {}
+
+        if (session != null) {
+          // Immediately authenticated without confirmation link!
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('is_logged_in', true);
+          await prefs.setString('user_email', user.email ?? email);
+          await prefs.setString('user_id', user.id);
+
+          if (mounted) {
+            try {
+              final cartProvider = Provider.of<CartProvider>(context, listen: false);
+              await cartProvider.loadUserCart();
+            } catch (_) {}
+
+            Navigator.of(context).pop(); // Close registration dialog
+            Navigator.pushReplacementNamed(
+              context,
+              '/home',
+              arguments: {'showLoginSuccess': true},
+            );
+          }
+          return;
+        } else {
+          // If Supabase project still requires email confirmation
+          if (mounted) {
+            AppNotify.success(
+              context,
+              'Account registered! Please check your email to confirm your account.',
+            );
+            Navigator.of(context).pop();
+            showDialog(
+              context: context,
+              builder: (context) => Dialog(
+                insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                child: const SizedBox(
+                  height: 500,
+                  child: LoginScreen(),
+                ),
+              ),
+            );
+          }
+          return;
         }
       } else if (mounted) {
-        AppNotify.error(context, 'Registration failed.');
+        AppNotify.error(context, 'Registration failed. Please try again.');
       }
     } catch (e) {
-      if (mounted) AppNotify.error(context, ErrorHandler.getErrorMessage(e));
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('already registered') ||
+          errorStr.contains('already exists') ||
+          errorStr.contains('user_already_exists')) {
+        if (mounted) {
+          AppNotify.error(context, 'This email is already registered. Please sign in instead.');
+        }
+      } else {
+        if (mounted) AppNotify.error(context, ErrorHandler.getErrorMessage(e));
+      }
     } finally {
-
       if (mounted) setState(() => _isLoading = false);
     }
   }

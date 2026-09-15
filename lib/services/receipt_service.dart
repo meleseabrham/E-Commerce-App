@@ -252,4 +252,8 @@ class ReceiptService {
   static String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
+
+  static Future<void> sendReceiptByEmail(String userEmail, String receiptPath, PurchaseOrder order) async {
+    // Placeholder: send receipt by email via backend / SMTP
+  }
 } 

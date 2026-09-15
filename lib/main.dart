@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,6 +50,29 @@ void main() async {
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
   );
+
+  // Sync Supabase auth state changes with SharedPreferences
+  Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+    final session = data.session;
+    final event = data.event;
+    if (session != null && (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed || event == AuthChangeEvent.userUpdated)) {
+      await prefs.setBool('is_logged_in', true);
+      await prefs.setString('user_email', session.user.email ?? '');
+      await prefs.setString('user_id', session.user.id);
+    } else if (event == AuthChangeEvent.signedOut) {
+      await prefs.setBool('is_logged_in', false);
+      await prefs.remove('user_email');
+      await prefs.remove('user_id');
+    }
+  });
+
+  // If already authenticated on launch (e.g. from Google OAuth redirect on web)
+  final initialUser = Supabase.instance.client.auth.currentUser;
+  if (initialUser != null) {
+    await prefs.setBool('is_logged_in', true);
+    await prefs.setString('user_email', initialUser.email ?? '');
+    await prefs.setString('user_id', initialUser.id);
+  }
 
   runApp(
     MultiProvider(

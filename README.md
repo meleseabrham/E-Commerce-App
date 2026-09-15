@@ -213,6 +213,38 @@ CREATE TRIGGER on_auth_user_created
 > WHERE id NOT IN (SELECT id FROM public.users);
 > ```
 
+### ⚡ Instant Login (Without Email Confirmation Link)
+
+To allow users to register and sign in immediately without needing to click an email confirmation link:
+
+**Method 1: Supabase Dashboard Toggle (Recommended)**
+1. In the [Supabase Dashboard](https://supabase.com/dashboard), go to **Authentication** -> **Providers** -> **Email**.
+2. Turn **OFF** the toggle for **Confirm email**.
+3. Click **Save**.
+
+**Method 2: Auto-Confirm SQL Trigger**
+Run this in the **Supabase SQL Editor**:
+```sql
+-- 1. Confirm all existing users immediately
+UPDATE auth.users
+SET email_confirmed_at = NOW()
+WHERE email_confirmed_at IS NULL;
+
+-- 2. Automatically mark future signups as confirmed
+CREATE OR REPLACE FUNCTION public.auto_confirm_user()
+RETURNS trigger AS $$
+BEGIN
+  NEW.email_confirmed_at = COALESCE(NEW.email_confirmed_at, NOW());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_auto_confirm ON auth.users;
+CREATE TRIGGER on_auth_user_auto_confirm
+  BEFORE INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.auto_confirm_user();
+```
+
 ---
 
 ## 🚀 Getting Started
