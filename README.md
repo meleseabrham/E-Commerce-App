@@ -42,28 +42,36 @@ Mehal Gebeya uses a highly relational PostgreSQL schema optimized for e-commerce
 
 ```mermaid
 erDiagram
+    AUTH_USERS ||--|| USERS : "synced by trigger"
     USERS ||--o{ ORDERS : "places"
     USERS ||--o{ USER_ADDRESSES : "has"
     USERS ||--o{ NOTIFICATIONS : "receives"
     USERS ||--o{ PRODUCT_REVIEWS : "writes"
     USERS ||--o{ WISHLIST : "saves"
     USERS ||--o| CARTS : "owns"
-    
+
     CATEGORIES ||--o{ PRODUCTS : "contains"
     PRODUCTS ||--o{ ORDER_ITEMS : "included in"
     PRODUCTS ||--o{ WISHLIST : "added to"
     PRODUCTS ||--o{ PRODUCT_REVIEWS : "reviewed in"
-    
+
     ORDERS ||--|{ ORDER_ITEMS : "consists of"
     ORDERS ||--o| PAYMENTS : "paid by"
     ORDERS ||--o{ NOTIFICATIONS : "triggers"
     USER_ADDRESSES ||--o{ ORDERS : "shipping destination"
-    
+
     USERS ||--o{ AUDIT_LOGS : "acts as"
     ORDERS ||--o{ AUDIT_LOGS : "logged for"
 
-    USERS {
+    AUTH_USERS {
         uuid id PK
+        text email
+        jsonb raw_user_meta_data
+        timestamp created_at
+    }
+
+    USERS {
+        uuid id PK "FK to auth.users"
         text email
         text full_name
         bool is_admin
@@ -165,6 +173,45 @@ erDiagram
         timestamp timestamp
     }
 ```
+
+### 🔄 Auto-Sync Trigger: `auth.users` → `public.users`
+
+Every signup (email/password **or** Google OAuth) automatically creates a matching row in `public.users` via a PostgreSQL trigger:
+
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name, avatar_url, created_at, is_admin)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture', ''),
+    NOW(),
+    FALSE
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+> **One-time backfill** — to sync existing auth users who predate the trigger:
+> ```sql
+> INSERT INTO public.users (id, email, full_name, avatar_url, created_at, is_admin)
+> SELECT id, email,
+>   COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', ''),
+>   COALESCE(raw_user_meta_data->>'avatar_url', raw_user_meta_data->>'picture', ''),
+>   created_at, FALSE
+> FROM auth.users
+> WHERE id NOT IN (SELECT id FROM public.users);
+> ```
 
 ---
 
