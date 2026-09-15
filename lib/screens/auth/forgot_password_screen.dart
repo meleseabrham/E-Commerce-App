@@ -125,15 +125,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget _buildHeader(bool isDark) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.highlight.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.refresh_rounded, size: 40, color: AppColors.highlight),
-        ),
-        const SizedBox(height: 16),
+        // Container(
+        //   padding: const EdgeInsets.all(12),
+        //   decoration: BoxDecoration(
+        //     color: AppColors.highlight.withOpacity(0.1),
+        //     shape: BoxShape.circle,
+        //   ),
+        //   child: Icon(Icons.refresh_rounded, size: 40, color: AppColors.highlight),
+        // ),
+        // const SizedBox(height: 16),
         RichText(
           text: TextSpan(
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5),
@@ -173,8 +173,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SizedBox(height: 24),
           _buildTextField(
             controller: _emailController,
-            label: 'Email Address',
-            icon: Icons.alternate_email_rounded,
+            hintText: 'Enter your email',
+            icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
           ),
         ],
@@ -184,47 +184,39 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
+    required String hintText,
     required IconData icon,
     TextInputType? keyboardType,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey),
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(fontSize: 14, color: Colors.grey.shade400, fontWeight: FontWeight.normal),
+        prefixIcon: Icon(icon, size: 20, color: AppColors.primary),
+        filled: true,
+        fillColor: AppColors.primary.withOpacity(0.03),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 20, color: AppColors.primary),
-            filled: true,
-            fillColor: AppColors.primary.withOpacity(0.03),
-            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1.5),
-            ),
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) return 'Required';
-            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Invalid email';
-            return null;
-          },
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
-      ],
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1.5),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) return 'Required';
+        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Invalid email';
+        return null;
+      },
     );
   }
 

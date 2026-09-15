@@ -192,15 +192,15 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildHeader(bool isDark) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.lock_person_rounded, size: 40, color: AppColors.primary),
-        ),
-        const SizedBox(height: 16),
+        // Container(
+        //   padding: const EdgeInsets.all(12),
+        //   decoration: BoxDecoration(
+        //     color: AppColors.primary.withOpacity(0.1),
+        //     shape: BoxShape.circle,
+        //   ),
+        //   child: Icon(Icons.lock_person_rounded, size: 40, color: AppColors.primary),
+        // ),
+        // const SizedBox(height: 16),
         RichText(
           text: TextSpan(
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5),
@@ -234,15 +234,15 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           _buildTextField(
             controller: _emailController,
-            label: 'Email Address',
-            icon: Icons.alternate_email_rounded,
+            hintText: 'Enter your email',
+            icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _buildTextField(
             controller: _passwordController,
-            label: 'Password',
-            icon: Icons.password_rounded,
+            hintText: 'Enter your password',
+            icon: Icons.key_rounded,
             isPassword: true,
           ),
         ],
@@ -252,49 +252,41 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
+    required String hintText,
     required IconData icon,
     bool isPassword = false,
     TextInputType? keyboardType,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey),
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword && _obscurePassword,
+      keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(fontSize: 14, color: Colors.grey.shade400, fontWeight: FontWeight.normal),
+        prefixIcon: Icon(icon, size: 20, color: AppColors.primary),
+        suffixIcon: isPassword ? IconButton(
+          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20),
+          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+        ) : null,
+        filled: true,
+        fillColor: AppColors.primary.withOpacity(0.03),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: isPassword && _obscurePassword,
-          keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 20, color: AppColors.primary),
-            suffixIcon: isPassword ? IconButton(
-              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-            ) : null,
-            filled: true,
-            fillColor: AppColors.primary.withOpacity(0.03),
-            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1.5),
-            ),
-          ),
-          validator: (value) => (value == null || value.isEmpty) ? 'Required' : null,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
-      ],
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1.5),
+        ),
+      ),
+      validator: (value) => (value == null || value.isEmpty) ? 'Required' : null,
     );
   }
 
