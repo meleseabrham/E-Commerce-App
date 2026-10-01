@@ -43,12 +43,31 @@ class ErrorHandler {
       return 'This email is already registered. Please sign in instead.';
     }
 
-    if (errStr.contains('SocketException') || errStr.contains('Failed host lookup')) {
-      return 'No internet connection. Please check your network.';
+    final errLower = errStr.toLowerCase();
+
+    // Catch all network-related exceptions (ClientException, SocketException, Connection reset, etc.)
+    if (errLower.contains('socketexception') ||
+        errLower.contains('failed host lookup') ||
+        errLower.contains('connection reset') ||
+        errLower.contains('connection refused') ||
+        errLower.contains('connection closed') ||
+        errLower.contains('clientexception') ||
+        errLower.contains('network is unreachable') ||
+        errLower.contains('handshakeexception') ||
+        errLower.contains('timeoutexception') ||
+        errLower.contains('software caused connection abort') ||
+        errLower.contains('xmlhttprequest error') ||
+        errLower.contains('os error')) {
+      return 'Unable to connect. Please check your internet connection.';
     }
     
     if (errStr.contains('521') || errStr.contains('503')) {
       return 'The database is currently paused. Please try again in a few seconds...';
+    }
+
+    // Never leak raw technical URLs, query parameters, or stack traces
+    if (errLower.contains('uri=https://') || errLower.contains('supabase.co')) {
+      return 'Unable to connect to the server. Please check your connection and try again.';
     }
 
     return errStr;

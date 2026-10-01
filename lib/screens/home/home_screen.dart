@@ -15,6 +15,8 @@ import 'dart:io' show InternetAddress;
 import '../categories/category_products_screen.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../utils/error_handler.dart';
+import '../../widgets/network_error_view.dart';
+import '../../utils/network_helper.dart';
 
 
 const List<Map<String, dynamic>> kStaticCategories = [
@@ -235,12 +237,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     try {
-      final data = await Supabase.instance.client
-          .from('products')
-          .select()
-          .eq('is_sold', false)
-          .ilike('name', '%$query%')
-          .order('created_at', ascending: false);
+      final data = await retryOperation(() async {
+        return await Supabase.instance.client
+            .from('products')
+            .select()
+            .eq('is_sold', false)
+            .ilike('name', '%$query%')
+            .order('created_at', ascending: false);
+      });
       final products = (data as List)
           .map((map) => Product.fromMap(map as Map<String, dynamic>))
           .toList();
@@ -511,33 +515,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? _buildSearchResults(gridColumns, gridPadding)
                         : FutureBuilder(
                             future: (() async {
-                              try {
+                              return await retryOperation(() async {
                                 final data = await Supabase.instance.client
                                     .from('products')
                                     .select()
                                     .eq('is_sold', false)
                                     .order('created_at', ascending: false);
                                 return data;
-                              } catch (e) {
-                                throw e;
-                              }
+                              });
                             })(),
                             builder: (context, snapshot) {
                               if (snapshot.hasError) {
-                                final error = snapshot.error.toString();
-                                if (error.contains('SocketException')) {
-                                  return SizedBox.shrink(); // Don't show here
-                                }
-                                return Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(20.0),
-                                    child: Text(
-                                      ErrorHandler.getErrorMessage(snapshot.error!),
-                                      style: const TextStyle(color: Colors.red),
-                                    ),
-                                  ),
+                                return NetworkErrorView(
+                                  message: ErrorHandler.getErrorMessage(snapshot.error!),
+                                  onRetry: _refreshProducts,
                                 );
-
                               }
                               if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
                               final products = (snapshot.data as List)
@@ -578,33 +570,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                   ],
-                );
-              },
-            ),
-            Builder(
-              builder: (context) {
-                // Only show the error message once if either categories or products fail
-                final hasNoInternet = false; // Will be set below
-                return FutureBuilder(
-                  future: (() async {
-                    try {
-                      await Supabase.instance.client.from('categories').select('id, name');
-                      await Supabase.instance.client.from('products').select();
-                      return false;
-                    } catch (e) {
-                      final error = e.toString();
-                      if (error.contains('SocketException')) {
-                        return true;
-                      }
-                      return false;
-                    }
-                  })(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData && snapshot.data == true) {
-                      return Center(child: Text('No internet connection.'));
-                    }
-                    return SizedBox.shrink();
-                  },
                 );
               },
             ),
@@ -667,7 +632,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refreshProducts() async {
-    setState(() {}); // Triggers FutureBuilder to re-fetch products
+    _fetchCategories();
+    _fetchWishlistCount();
+    setState(() {});
   }
 
   Widget _buildDrawer(BuildContext context) {
@@ -700,23 +667,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Positioned(
-                  right: 10,
-                  top: 18,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.shadow,
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                  right: 14,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.shadow,
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.close, color: AppColors.error, size: 30),
-                      onPressed: () => Navigator.pop(context),
+                        child: Icon(Icons.close, color: AppColors.error, size: 16),
+                      ),
                     ),
                   ),
                 ),

@@ -8,7 +8,11 @@
     "description": "Ethiopian E-commerce Platform - Shop local products, food, handicrafts, and more",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
-    "categories": ["shopping", "lifestyle", "business"],
+    "categories": [
+        "shopping",
+        "lifestyle",
+        "business"
+    ],
     "lang": "en",
     "scope": "/",
     "icons": [

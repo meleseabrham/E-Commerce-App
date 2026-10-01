@@ -36,6 +36,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#18804B">
   <meta name="msapplication-TileColor" content="#18804B">
+  <meta name="theme-color" content="#18804B" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#18804B" media="(prefers-color-scheme: dark)">
   
   <!-- Preload critical resources -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,65 +45,82 @@
   
   <!-- Loading indicator -->
   <style>
-    body {
+    html, body {
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, #18804B 0%, #00BFAE 100%);
+      width: 100%;
+      height: 100%;
+      background-color: #18804B !important;
+    }
+    body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      background-color: #18804B !important;
     }
     .loading-container {
       text-align: center;
       color: white;
+      padding: 20px;
+      max-width: 280px;
+      width: 100%;
+    }
+    .app-icon {
+      width: 130px;
+      height: 130px;
+      border-radius: 28px;
+      margin: 0 auto 20px;
+      display: block;
+      object-fit: contain;
+    }
+    .app-title {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .app-subtitle {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 24px;
     }
     .loading-spinner {
-      width: 50px;
-      height: 50px;
+      width: 36px;
+      height: 36px;
       border: 3px solid rgba(255,255,255,0.3);
       border-radius: 50%;
       border-top-color: white;
       animation: spin 1s ease-in-out infinite;
-      margin: 0 auto 20px;
+      margin: 0 auto;
     }
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    .app-title {
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-    .app-subtitle {
-      font-size: 16px;
-      opacity: 0.9;
-    }
   </style>
 </head>
-<body>
-  <div class="loading-container">
-    <div class="loading-spinner"></div>
+<body style="background-color:#18804B;">
+  <div id="loading-screen" class="loading-container">
+    <img src="icons/Icon-512.png" class="app-icon" alt="MeHal Gebeya" />
     <div class="app-title">MeHal Gebeya</div>
-    <div class="app-subtitle">Loading...</div>
+    <div class="app-subtitle">Ethiopian E-commerce</div>
+    <div class="loading-spinner"></div>
   </div>
   <script src="flutter_bootstrap.js" async></script>
   <script>
-    // Register service worker for PWA functionality
+    // Unregister old service workers so index.html is never served stale
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/flutter_service_worker.js')
-          .then(function (registration) {
-            console.log('SW registered: ', registration);
-          })
-          .catch(function (registrationError) {
-            console.log('SW registration failed: ', registrationError);
-          });
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let r of registrations) { r.unregister(); }
       });
     }
-    
-
+    // Hide HTML splash once Flutter takes over
+    window.addEventListener('flutter-first-frame', function() {
+      const el = document.getElementById('loading-screen');
+      if (el) el.style.display = 'none';
+    });
   </script>
 </body>
 </html>

@@ -231,22 +231,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   if (images.length > 1)
                     Positioned(
                       bottom: 12, left: 0, right: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(images.length, (i) {
-                          final active = i == _currentImageIndex;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: active ? 22 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: active ? Colors.white : Colors.white54,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          );
-                        }),
+                      child: Center(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(images.length, (i) {
+                              final active = i == _currentImageIndex;
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                width: active ? 22 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: active ? Colors.white : Colors.white54,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
                       ),
                     ),
                   // Left arrow
