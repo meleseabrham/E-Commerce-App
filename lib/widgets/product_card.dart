@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import '../providers/wishlist_provider.dart';
+import '../utils/currency.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -60,7 +61,7 @@ class ProductCard extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2),
                     child: Text(
-                      '${product.price.toStringAsFixed(2)}',
+                      formatETB(product.price),
                       style: const TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.bold,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/currency.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
 import '../theme/app_colors.dart';
@@ -165,7 +166,7 @@ class _OrderReceiptCheckerState extends State<OrderReceiptChecker> {
                       ),
                     ),
                     Text(
-                      'Total: \$${_order!.total.toStringAsFixed(2)}',
+                      'Total: ${formatETB(_order!.total)}',
                       style: TextStyle(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? AppColors.darkTextSecondary

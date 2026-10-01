@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../models/order.dart';
+import '../utils/currency.dart';
 import 'dart:typed_data';
 
 class ReceiptService {
@@ -223,8 +224,8 @@ class ReceiptService {
       data: order.items.map((item) => [
         item.name,
         item.quantity.toString(),
-        '\$${item.price.toStringAsFixed(2)}',
-        '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+        formatETB(item.price),
+        formatETB(item.price * item.quantity),
       ]).toList(),
       border: null,
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
@@ -245,10 +246,10 @@ class ReceiptService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        _buildTotalRow('Subtotal:', '\$${subtotal.toStringAsFixed(2)}'),
-        _buildTotalRow('Tax (15%):', '\$${tax.toStringAsFixed(2)}'),
+        _buildTotalRow('Subtotal:', formatETB(subtotal)),
+        _buildTotalRow('Tax (15%):', formatETB(tax)),
         pw.SizedBox(height: 5),
-        _buildTotalRow('Total:', '\$${total.toStringAsFixed(2)}', isBold: true),
+        _buildTotalRow('Total:', formatETB(total), isBold: true),
       ],
     );
   }

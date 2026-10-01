@@ -5,6 +5,7 @@ import '../../models/cart_item.dart';
 import '../../providers/cart_provider.dart';
 import 'package:provider/provider.dart';
 import '../payment/payment_screen.dart';
+import '../../utils/currency.dart';
 import '../auth/login_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -198,7 +199,7 @@ onPressed: () {
                   ),
                 ),
                 Text(
-                  '\$${subtotal.toStringAsFixed(2)}',
+                  formatETB(subtotal),
                   style: TextStyle(
                     fontSize: 15,
                     color: AppColors.textPrimary,
@@ -220,7 +221,7 @@ onPressed: () {
                   ),
                 ),
                 Text(
-                  '\$${tax.toStringAsFixed(2)}',
+                  formatETB(tax),
                   style: TextStyle(
                     fontSize: 15,
                     color: AppColors.textPrimary,
@@ -243,7 +244,7 @@ onPressed: () {
                   ),
                 ),
                 Text(
-                  '\$${total.toStringAsFixed(2)}',
+                  formatETB(total),
                   style: TextStyle(
                     fontSize: 22,
                     color: AppColors.secondary,
@@ -450,7 +451,7 @@ class CartItemWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${cartItem.price.toStringAsFixed(2)}',
+                    formatETB(cartItem.price),
                     style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/currency.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
@@ -492,7 +493,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             style: TextStyle(color: AppColors.textSecondary),
                           ),
                           Text(
-                            '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+                            formatETB(item.price * item.quantity),
                             style: TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.bold,
@@ -515,7 +516,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                     ),
                     Text(
-                      '\$${subtotal.toStringAsFixed(2)}',
+                      formatETB(subtotal),
                       style: TextStyle(
                         fontSize: 15,
                         color: AppColors.textPrimary,
@@ -536,7 +537,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                     ),
                     Text(
-                      '\$${tax.toStringAsFixed(2)}',
+                      formatETB(tax),
                       style: TextStyle(
                         fontSize: 15,
                         color: AppColors.textPrimary,
@@ -558,7 +559,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                     ),
                     Text(
-                      '\$${totalWithTax.toStringAsFixed(2)}',
+                      formatETB(totalWithTax),
                       style: TextStyle(
                         fontSize: 20,
                         color: AppColors.primary,

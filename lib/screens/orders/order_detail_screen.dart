@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import '../../utils/currency.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -212,7 +213,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         const SizedBox(height: 4),
                         Text('Quantity: ${item.quantity}'),
                         Text(
-                          ' Price: ${(item.price )}',
+                          ' Price: ${formatETB(item.price)}',
                           style: const TextStyle(
                             color: Colors.green,
                             fontWeight: FontWeight.bold,
@@ -244,7 +245,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Subtotal', style: TextStyle(fontSize: 15, color: Colors.grey)),
-                        Text(subtotal.toStringAsFixed(2), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        Text(formatETB(subtotal), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -252,7 +253,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Tax (15%)', style: TextStyle(fontSize: 15, color: Colors.grey)),
-                        Text(tax.toStringAsFixed(2), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        Text(formatETB(tax), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                       ],
                     ),
                     const Divider(height: 20),
@@ -260,7 +261,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text(total.toStringAsFixed(2), style: const TextStyle(fontSize: 20, color: Colors.green, fontWeight: FontWeight.bold)),
+                        Text(formatETB(total), style: const TextStyle(fontSize: 20, color: Colors.green, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ],

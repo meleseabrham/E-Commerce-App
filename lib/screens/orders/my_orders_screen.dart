@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/currency.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -618,7 +619,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     if (price == null) return '';
     try {
       final p = price is num ? price : double.parse(price.toString());
-      return '${p.toStringAsFixed(2)}';
+      return formatETB(p);
     } catch (_) {
       return '';
     }

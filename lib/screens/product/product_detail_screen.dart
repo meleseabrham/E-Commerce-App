@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:flutter/material.dart';
+import '../../utils/currency.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import '../../theme/app_colors.dart';
 import '../../models/product.dart';
@@ -27,6 +29,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Map<String, dynamic>? _myReview;
 
   int _currentImageIndex = 0;
+  late final PageController _pageController;
+  Timer? _autoSlideTimer;
 
   List<String> get _allImages {
     final List<String> images = [];
@@ -38,8 +42,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _fetchReviews();
     _loadMyReview();
+    _startAutoSlide();
+  }
+
+  void _startAutoSlide() {
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      final images = _allImages;
+      if (images.length <= 1) return;
+      final next = (_currentImageIndex + 1) % images.length;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoSlideTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadMyReview() async {
@@ -154,52 +181,123 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 300,
-              width: double.infinity,
+            // ── Auto-sliding image carousel ──────────────────────────
+            SizedBox(
+              height: 320,
               child: Stack(
                 children: [
-                  Positioned.fill(child: _buildNetworkOrAsset(images[_currentImageIndex])),
-                  if (images.length > 1)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        icon: Icon(Icons.chevron_left, size: 32),
-                        onPressed: () {
-                          setState(() {
-                            _currentImageIndex = (_currentImageIndex - 1 + images.length) % images.length;
-                          });
-                        },
+                  // PageView
+                  PageView.builder(
+                    controller: _pageController,
+                    itemCount: images.length,
+                    onPageChanged: (i) => setState(() => _currentImageIndex = i),
+                    itemBuilder: (context, index) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.zero,
+                        child: _buildNetworkOrAsset(images[index], height: 320),
+                      );
+                    },
+                  ),
+                  // Bottom gradient
+                  Positioned(
+                    bottom: 0, left: 0, right: 0,
+                    child: Container(
+                      height: 60,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [Colors.black54, Colors.transparent],
+                        ),
                       ),
                     ),
-                  if (images.length > 1)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        icon: Icon(Icons.chevron_right, size: 32),
-                        onPressed: () {
-                          setState(() {
-                            _currentImageIndex = (_currentImageIndex + 1) % images.length;
-                          });
-                        },
-                      ),
-                    ),
+                  ),
+                  // Dot indicators
                   if (images.length > 1)
                     Positioned(
-                      bottom: 8,
-                      left: 0,
-                      right: 0,
+                      bottom: 12, left: 0, right: 0,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(images.length, (i) => Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: i == _currentImageIndex ? Colors.white : Colors.white54,
-                              ),
-                            )),
+                        children: List.generate(images.length, (i) {
+                          final active = i == _currentImageIndex;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: active ? 22 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: active ? Colors.white : Colors.white54,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  // Left arrow
+                  if (images.length > 1)
+                    Positioned(
+                      left: 8, top: 0, bottom: 0,
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            _autoSlideTimer?.cancel();
+                            _pageController.previousPage(
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeInOut,
+                            );
+                            _startAutoSlide();
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black38,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(6),
+                            child: const Icon(Icons.chevron_left, color: Colors.white, size: 28),
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Right arrow
+                  if (images.length > 1)
+                    Positioned(
+                      right: 8, top: 0, bottom: 0,
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            _autoSlideTimer?.cancel();
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeInOut,
+                            );
+                            _startAutoSlide();
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black38,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(6),
+                            child: const Icon(Icons.chevron_right, color: Colors.white, size: 28),
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Image counter badge
+                  if (images.length > 1)
+                    Positioned(
+                      top: 12, right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_currentImageIndex + 1} / ${images.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                 ],
@@ -229,7 +327,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${widget.product.price.toStringAsFixed(2)}',
+                    formatETB(widget.product.price),
                     style: TextStyle(
                       fontSize: 20,
                       color: AppColors.primary,
