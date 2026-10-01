@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:provider/provider.dart';
 import '../../models/product.dart';
@@ -678,7 +678,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         children: [
           Container(
-            height: 150,
+            height: 75,
             decoration: BoxDecoration(
               color: AppColors.primary,
               borderRadius: const BorderRadius.only(
@@ -701,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Positioned(
                   right: 10,
-                  top: 56,
+                  top: 18,
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surface,

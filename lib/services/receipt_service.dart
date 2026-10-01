@@ -74,6 +74,11 @@ class ReceiptService {
                   pw.SizedBox(height: 20),
                   pw.Text('Order #${order.id}'),
                   pw.Text('Date: ${_formatDate(order.orderDate)}'),
+                  if (order.paymentMethod.isNotEmpty)
+                    pw.Text('Payment Method: ${order.paymentMethod}'),
+                  if (order.paymentId.isNotEmpty)
+                    pw.Text('Payment Account: ${order.paymentId}'),
+                  pw.Text('Order Status: ${order.status.toUpperCase()}'),
                   pw.SizedBox(height: 20),
                   pw.Text('Items:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 10),
@@ -169,6 +174,11 @@ class ReceiptService {
                   pw.SizedBox(height: 20),
                   pw.Text('Order #${order.id}'),
                   pw.Text('Date: ${_formatDate(order.orderDate)}'),
+                  if (order.paymentMethod.isNotEmpty)
+                    pw.Text('Payment Method: ${order.paymentMethod}'),
+                  if (order.paymentId.isNotEmpty)
+                    pw.Text('Payment Account: ${order.paymentId}'),
+                  pw.Text('Order Status: ${order.status.toUpperCase()}'),
                   pw.SizedBox(height: 20),
                   pw.Text('Items:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 10),
@@ -224,13 +234,18 @@ class ReceiptService {
   }
 
   static pw.Widget _buildTotalSection(PurchaseOrder order) {
-    final tax = order.totalAmount * 0.15;
-    final total = order.totalAmount + tax;
+    // Compute true subtotal from individual items
+    final double subtotal = order.items.fold(
+      0.0,
+      (sum, item) => sum + item.price * item.quantity,
+    );
+    final double tax = subtotal * 0.15;
+    final double total = subtotal + tax;
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        _buildTotalRow('Subtotal:', '\$${order.totalAmount.toStringAsFixed(2)}'),
+        _buildTotalRow('Subtotal:', '\$${subtotal.toStringAsFixed(2)}'),
         _buildTotalRow('Tax (15%):', '\$${tax.toStringAsFixed(2)}'),
         pw.SizedBox(height: 5),
         _buildTotalRow('Total:', '\$${total.toStringAsFixed(2)}', isBold: true),
