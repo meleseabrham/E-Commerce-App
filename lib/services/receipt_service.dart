@@ -2,19 +2,28 @@ import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import '../models/order.dart';
-import 'package:http/http.dart' as http;
 import 'dart:typed_data';
-import 'package:pdf/widgets.dart' show BarcodeWidget, Barcode;
 
 class ReceiptService {
+  static Future<pw.MemoryImage?> _loadLogoImage() async {
+    try {
+      final byteData = await rootBundle.load('assets/icon/icon.png');
+      return pw.MemoryImage(byteData.buffer.asUint8List());
+    } catch (_) {
+      try {
+        final byteData = await rootBundle.load('assets/logo/animate.png');
+        return pw.MemoryImage(byteData.buffer.asUint8List());
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
   static Future<String> generateReceipt(PurchaseOrder order) async {
     final pdf = pw.Document();
-
-    // Download logo from remote URL
-    final logoUrl = 'https://lpndjssicpcnssmngqln.supabase.co/storage/v1/object/sign/mehalgebeya/assets/logo/icon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yMjMyMzlhYy1jM2IwLTQ5ZDEtYmQzYS0wYzg4NWMwNDkxZmYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWhhbGdlYmV5YS9hc3NldHMvbG9nby9pY29uLnBuZyIsImlhdCI6MTc1Mjc0NDMzMSwiZXhwIjoxNzg0MjgwMzMxfQ.xwoHp7O4wHLcijjE-d7UNmvWMR-pUTeE7Ax07dkEbP4';
-    final response = await http.get(Uri.parse(logoUrl));
-    final logoImage = pw.MemoryImage(response.bodyBytes);
+    final logoImage = await _loadLogoImage();
 
     pdf.addPage(
       pw.Page(
@@ -23,16 +32,17 @@ class ReceiptService {
           return pw.Stack(
             children: [
               // Watermark (centered, faint)
-              pw.Positioned(
-                left: 0,
-                top: 0,
-                child: pw.Center(
-                  child: pw.Opacity(
-                    opacity: 0.08,
-                    child: pw.Image(logoImage, width: 400, height: 400, fit: pw.BoxFit.contain),
+              if (logoImage != null)
+                pw.Positioned(
+                  left: 0,
+                  top: 0,
+                  child: pw.Center(
+                    child: pw.Opacity(
+                      opacity: 0.08,
+                      child: pw.Image(logoImage, width: 400, height: 400, fit: pw.BoxFit.contain),
+                    ),
                   ),
                 ),
-              ),
               // QR code (bottom left)
               pw.Positioned(
                 left: 20,
@@ -77,22 +87,23 @@ class ReceiptService {
                 ],
               ),
               // Seal (bottom right)
-              pw.Positioned(
-                bottom: 30,
-                right: 30,
-                child: pw.Container(
-                  width: 80,
-                  height: 80,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey, width: 2),
-                    shape: pw.BoxShape.circle,
-                  ),
-                  child: pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+              if (logoImage != null)
+                pw.Positioned(
+                  bottom: 30,
+                  right: 30,
+                  child: pw.Container(
+                    width: 80,
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey, width: 2),
+                      shape: pw.BoxShape.circle,
+                    ),
+                    child: pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                    ),
                   ),
                 ),
-              ),
             ],
           );
         },
@@ -107,11 +118,7 @@ class ReceiptService {
 
   static Future<Uint8List> generateReceiptWeb(PurchaseOrder order) async {
     final pdf = pw.Document();
-
-    // Download logo from remote URL
-    final logoUrl = 'https://lpndjssicpcnssmngqln.supabase.co/storage/v1/object/sign/mehalgebeya/assets/logo/icon.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yMjMyMzlhYy1jM2IwLTQ5ZDEtYmQzYS0wYzg4NWMwNDkxZmYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWhhbGdlYmV5YS9hc3NldHMvbG9nby9pY29uLnBuZyIsImlhdCI6MTc1Mjc0NDMzMSwiZXhwIjoxNzg0MjgwMzMxfQ.xwoHp7O4wHLcijjE-d7UNmvWMR-pUTeE7Ax07dkEbP4';
-    final response = await http.get(Uri.parse(logoUrl));
-    final logoImage = pw.MemoryImage(response.bodyBytes);
+    final logoImage = await _loadLogoImage();
 
     pdf.addPage(
       pw.Page(
@@ -120,16 +127,17 @@ class ReceiptService {
           return pw.Stack(
             children: [
               // Watermark (centered, faint)
-              pw.Positioned(
-                left: 0,
-                top: 0,
-                child: pw.Center(
-                  child: pw.Opacity(
-                    opacity: 0.08,
-                    child: pw.Image(logoImage, width: 400, height: 400, fit: pw.BoxFit.contain),
+              if (logoImage != null)
+                pw.Positioned(
+                  left: 0,
+                  top: 0,
+                  child: pw.Center(
+                    child: pw.Opacity(
+                      opacity: 0.08,
+                      child: pw.Image(logoImage, width: 400, height: 400, fit: pw.BoxFit.contain),
+                    ),
                   ),
                 ),
-              ),
               // QR code (bottom left)
               pw.Positioned(
                 left: 0,
@@ -174,22 +182,23 @@ class ReceiptService {
                 ],
               ),
               // Seal (bottom right)
-              pw.Positioned(
-                bottom: 30,
-                right: 30,
-                child: pw.Container(
-                  width: 80,
-                  height: 80,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.blue, width: 0.5),
-                    shape: pw.BoxShape.circle,
-                  ),
-                  child: pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+              if (logoImage != null)
+                pw.Positioned(
+                  bottom: 30,
+                  right: 30,
+                  child: pw.Container(
+                    width: 80,
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.blue, width: 0.5),
+                      shape: pw.BoxShape.circle,
+                    ),
+                    child: pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                    ),
                   ),
                 ),
-              ),
             ],
           );
         },

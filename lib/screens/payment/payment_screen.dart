@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
@@ -448,6 +448,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildOrderSummary() {
+    final double subtotal = widget.totalAmount;
+    final double tax = subtotal * 0.15;
+    final double totalWithTax = subtotal + tax;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -504,6 +508,48 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
+                      'Subtotal',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '\$${subtotal.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Tax (15%)',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '\$${tax.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
                       'Total',
                       style: TextStyle(
                         fontSize: 18,
@@ -512,7 +558,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                     ),
                     Text(
-                      '\$${widget.totalAmount.toStringAsFixed(2)}',
+                      '\$${totalWithTax.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 20,
                         color: AppColors.primary,
@@ -597,6 +643,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     setState(() => _isProcessing = true);
     try {
+      final double subtotal = widget.totalAmount;
+      final double tax = subtotal * 0.15;
+      final double totalWithTax = subtotal + tax;
+
       final orderId = const Uuid().v4();
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
@@ -606,8 +656,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         'id': orderId,
         'user_id': user.id,
         'items': widget.items.map((item) => item.toMap()).toList(),
-        'totalAmount': widget.totalAmount,
-        'total': widget.totalAmount,
+        'totalAmount': totalWithTax,
+        'total': totalWithTax,
         'paymentMethod': selectedPaymentMethod ?? '',
         'paymentId': _accountController.text,
         'orderDate': DateTime.now().toIso8601String(),
@@ -641,22 +691,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
         }
       }
 
-      // Insert a notification for admins
-      await Supabase.instance.client.from('notifications').insert({
-        'type': 'new_order',
-        'message': 'A new order has been placed: #$orderId',
-        'order_id': orderId,
-        'is_read': false,
-        'read': false,
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      // Insert notification (non-blocking for checkout)
+      try {
+        await Supabase.instance.client.from('notifications').insert({
+          'user_id': user.id,
+          'type': 'new_order',
+          'message': 'A new order has been placed: #$orderId',
+          'order_id': orderId,
+          'is_read': false,
+          'read': false,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      } catch (notifErr) {
+        debugPrint('Notice: notification insert skipped or failed: $notifErr');
+      }
 
       // Create payment record
       await Supabase.instance.client.from('payments').insert({
         'order_id': orderId,
         'user_id': user.id,
         'method': selectedPaymentMethod,
-        'amount': widget.totalAmount,
+        'amount': totalWithTax,
         'status': 'pending',
       });
       // Clear the cart after successful order

@@ -165,6 +165,10 @@ onPressed: () {
   }
 
   Widget _buildCheckoutSection(BuildContext context, CartProvider cart) {
+    final double subtotal = cart.totalAmount;
+    final double tax = subtotal * 0.15;
+    final double total = subtotal + tax;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -182,19 +186,64 @@ onPressed: () {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Subtotal row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total Amount:',
+                  'Subtotal:',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  '\$${subtotal.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 15,
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Tax (15%) row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Text(
-                  '\$${cart.totalAmount.toStringAsFixed(2)}',
+                  'Tax (15%):',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  '\$${tax.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            // Total row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '\$${total.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: 22,
                     color: AppColors.secondary,

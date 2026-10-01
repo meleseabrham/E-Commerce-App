@@ -225,25 +225,47 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             )),
             const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  '${(_payment?['amount'] ?? widget.order.total).toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            Builder(
+              builder: (context) {
+                double subtotal = 0.0;
+                for (final item in widget.order.items) {
+                  subtotal += item.price * item.quantity;
+                }
+                if (subtotal == 0.0) {
+                  final raw = ((_payment?['amount'] ?? widget.order.total) as num).toDouble();
+                  subtotal = raw / 1.15;
+                }
+                final tax = subtotal * 0.15;
+                final total = subtotal + tax;
+
+                return Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Subtotal', style: TextStyle(fontSize: 15, color: Colors.grey)),
+                        Text(subtotal.toStringAsFixed(2), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Tax (15%)', style: TextStyle(fontSize: 15, color: Colors.grey)),
+                        Text(tax.toStringAsFixed(2), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(total.toStringAsFixed(2), style: const TextStyle(fontSize: 20, color: Colors.green, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),

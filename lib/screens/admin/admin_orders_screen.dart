@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/admin_drawer.dart';
@@ -297,14 +297,18 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
   Future<void> _logAudit(String action, String orderId, String details, {String? userId}) async {
     final admin = Supabase.instance.client.auth.currentUser;
     if (admin == null) return;
-    await Supabase.instance.client.from('audit_logs').insert({
-      'admin_id': admin.id,
-      'actor_id': userId ?? admin.id,
-      'action': action,
-      'order_id': orderId,
-      'details': details,
-      'created_at': DateTime.now().toIso8601String(),
-    });
+    try {
+      await Supabase.instance.client.from('audit_logs').insert({
+        'admin_id': admin.id,
+        'actor_id': userId ?? admin.id,
+        'action': action,
+        'order_id': orderId,
+        'details': details,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Warning: audit log insert failed: $e');
+    }
   }
 
   void _bulkUpdateStatus(String status) async {

@@ -72,6 +72,7 @@ flutter:
     - assets/payment/
     - assets/handcraft/
     - assets/electronic/
+    - assets/icon/
     - assets/profile.jpg
     - assets/coffee.jpg
     - assets/scarf.jpg

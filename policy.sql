@@ -149,6 +149,9 @@ DROP POLICY IF EXISTS "Users can read own orders" ON public.orders;
 DROP POLICY IF EXISTS "Users can insert own orders" ON public.orders;
 DROP POLICY IF EXISTS "Admins can view all orders" ON public.orders;
 
+DROP POLICY IF EXISTS "Users can update own orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins can manage all orders" ON public.orders;
+
 CREATE POLICY "Users can read own orders" ON public.orders
   FOR SELECT TO authenticated
   USING (auth.uid() = user_id);
@@ -157,9 +160,19 @@ CREATE POLICY "Users can insert own orders" ON public.orders
   FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+CREATE POLICY "Users can update own orders" ON public.orders
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 CREATE POLICY "Admins can view all orders" ON public.orders
   FOR SELECT TO authenticated
   USING (public.is_admin());
+
+CREATE POLICY "Admins can manage all orders" ON public.orders
+  FOR ALL TO authenticated
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- ========================================
 -- ORDER_ITEMS
@@ -216,10 +229,21 @@ DROP POLICY IF EXISTS "Admins can read notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Admins read notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Users can read own notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Admins can manage notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Authenticated users can insert notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
 
 CREATE POLICY "Users can read own notifications" ON public.notifications
   FOR SELECT TO authenticated
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id OR user_id IS NULL OR public.is_admin());
+
+CREATE POLICY "Authenticated users can insert notifications" ON public.notifications
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Users can update own notifications" ON public.notifications
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id OR user_id IS NULL OR public.is_admin())
+  WITH CHECK (auth.uid() = user_id OR user_id IS NULL OR public.is_admin());
 
 CREATE POLICY "Admins can manage notifications" ON public.notifications
   FOR ALL TO authenticated
@@ -230,10 +254,21 @@ CREATE POLICY "Admins can manage notifications" ON public.notifications
 -- AUDIT_LOGS
 -- ========================================
 DROP POLICY IF EXISTS "Admins can read audit logs" ON public.audit_logs;
+DROP POLICY IF EXISTS "Authenticated users can insert audit logs" ON public.audit_logs;
+DROP POLICY IF EXISTS "Admins can manage audit logs" ON public.audit_logs;
 
 CREATE POLICY "Admins can read audit logs" ON public.audit_logs
   FOR SELECT TO authenticated
   USING (public.is_admin());
+
+CREATE POLICY "Authenticated users can insert audit logs" ON public.audit_logs
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Admins can manage audit logs" ON public.audit_logs
+  FOR ALL TO authenticated
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- ========================================
 -- CARTS

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mehal_gebeya/utils/app_notify.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -375,6 +375,21 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                         : (order['items'] as List<dynamic>?);
                     final firstItem = items != null && items.isNotEmpty ? items[0] : null;
                     final orderDate = order['orderDate'] ?? order['created_at'];
+
+                    double subtotal = 0.0;
+                    if (items != null && items.isNotEmpty) {
+                      for (final it in items) {
+                        final p = it['price'] is num ? (it['price'] as num).toDouble() : double.tryParse(it['price'].toString()) ?? 0.0;
+                        final q = it['quantity'] is num ? (it['quantity'] as num).toInt() : int.tryParse(it['quantity'].toString()) ?? 1;
+                        subtotal += (p * q);
+                      }
+                    }
+                    if (subtotal == 0.0) {
+                      final rawTotal = (order['total'] ?? order['totalAmount'] as num?)?.toDouble() ?? 0.0;
+                      subtotal = rawTotal / 1.15;
+                    }
+                    final double tax = subtotal * 0.15;
+                    final double total = subtotal + tax;
                     return InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () {
@@ -444,14 +459,54 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                             ],
                                           ),
                                         ),
-                                        Text(
-                                          _formatPrice(order['total']),
-                                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
+                                        Builder(
+                                          builder: (context) {
+                                            final itemPrice = price is num ? price.toDouble() : double.tryParse(price.toString()) ?? 0.0;
+                                            final itemQty = qty is num ? qty.toInt() : int.tryParse(qty.toString()) ?? 1;
+                                            return Text(
+                                              _formatPrice(itemPrice * itemQty),
+                                              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey, fontSize: 14),
+                                            );
+                                          },
                                         ),
                                       ],
                                     ),
                                   );
                                 }).toList(),
+                                const Divider(),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text('Subtotal:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                                          Text(_formatPrice(subtotal), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text('Tax (15%):', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                                          Text(_formatPrice(tax), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text('Total:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                          Text(
+                                            _formatPrice(total),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 const Divider(),
                               ],
                               Text(
@@ -584,16 +639,24 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
   Future<void> _markOrderDelivered(String orderId) async {
     try {
-      await Supabase.instance.client
+      final res = await Supabase.instance.client
           .from('orders')
           .update({
             'status': 'delivered',
             'updated_at': DateTime.now().toIso8601String(),
           })
-          .eq('id', orderId);
+          .eq('id', orderId)
+          .select();
+      if (res.isEmpty) {
+        if (mounted) {
+          AppNotify.error(context, 'Could not update order status.');
+        }
+        return;
+      }
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        await Supabase.instance.client.from('notifications').insert({
+        try {
+          await Supabase.instance.client.from('notifications').insert({
           'user_id': user.id,
           'order_id': orderId,
           'type': 'order_status_update',
@@ -602,12 +665,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           'read': false,
           'is_read': false,
         });
+        } catch (_) {}
       }
       setState(() {
         _ordersFuture = _fetchOrders();
       });
       if (mounted) {
-        AppNotify.error(context, ' Your Order Accepted.');
+        AppNotify.success(context, ' Your Order Accepted.');
       }
     } catch (e) {
       if (mounted) {
@@ -618,19 +682,26 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
   Future<void> _cancelOrder(String orderId) async {
     try {
-      await Supabase.instance.client
+      final res = await Supabase.instance.client
           .from('orders')
           .update({
             'status': 'cancelled',
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', orderId)
-          .eq('status', 'pending');
+          .eq('status', 'pending')
+          .select();
+      if (res.isEmpty) {
+        if (mounted) {
+          AppNotify.error(context, 'Could not cancel order (order not pending or permission denied).');
+        }
+        return;
+      }
       setState(() {
         _ordersFuture = _fetchOrders();
       });
       if (mounted) {
-        AppNotify.error(context, ' Your Order Cancelled.');
+        AppNotify.success(context, ' Your Order Cancelled.');
       }
     } catch (e) {
       if (mounted) {
