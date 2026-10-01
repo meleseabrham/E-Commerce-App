@@ -11,6 +11,7 @@ import '../payment/payment_screen.dart';
 import '../cart/cart_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_screen.dart'; // Added import for LoginScreen
+import '../../widgets/full_screen_image_viewer.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -37,6 +38,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (widget.product.imageUrl.isNotEmpty) images.add(widget.product.imageUrl);
     if (widget.product.imageUrls.isNotEmpty) images.addAll(widget.product.imageUrls.where((e) => e.isNotEmpty));
     return images.isEmpty ? [''] : images;
+  }
+
+  void _openFullScreenImage(int initialIndex) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FullScreenImageViewer(
+          images: _allImages,
+          initialIndex: initialIndex,
+        ),
+      ),
+    );
   }
 
   @override
@@ -192,9 +204,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     itemCount: images.length,
                     onPageChanged: (i) => setState(() => _currentImageIndex = i),
                     itemBuilder: (context, index) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.zero,
-                        child: _buildNetworkOrAsset(images[index], height: 320),
+                      return GestureDetector(
+                        onTap: () => _openFullScreenImage(index),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.zero,
+                          child: _buildNetworkOrAsset(images[index], height: 320),
+                        ),
                       );
                     },
                   ),
@@ -300,6 +315,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                       ),
                     ),
+                  // Tap to zoom hint badge
+                  Positioned(
+                    top: 12, left: 12,
+                    child: GestureDetector(
+                      onTap: () => _openFullScreenImage(_currentImageIndex),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.zoom_in, color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Tap to Zoom',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
