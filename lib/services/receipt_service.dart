@@ -274,7 +274,13 @@ class ReceiptService {
   }
 
   static String _formatDate(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final y = date.year;
+    final mo = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    final h = date.hour.toString().padLeft(2, '0');
+    final mi = date.minute.toString().padLeft(2, '0');
+    final s = date.second.toString().padLeft(2, '0');
+    return '$y-$mo-$d  $h:$mi:$s';
   }
 
   static Future<void> sendReceiptByEmail(String userEmail, String receiptPath, PurchaseOrder order) async {
